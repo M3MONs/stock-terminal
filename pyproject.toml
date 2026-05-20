@@ -8,4 +8,5 @@ dependencies = [
     "pydantic>=2.13.4",
     "rich>=15.0.0",
     "textual>=8.2.7",
+    "yoyo-migrations>=9.0.0",
 ]
