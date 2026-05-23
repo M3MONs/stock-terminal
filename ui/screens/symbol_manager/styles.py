@@ -1,4 +1,7 @@
 CSS = """
+SymbolManagerScreen {
+    align: center middle;
+}
 SymbolManagerScreen > #dialog {
     width: 70;
     height: auto;
@@ -6,7 +9,6 @@ SymbolManagerScreen > #dialog {
     border: solid $accent;
     background: $surface;
     padding: 1 2;
-    align: center middle;
 }
 SymbolManagerScreen > #dialog > #symbol-table { height: 1fr; }
 SymbolManagerScreen > #dialog > #title { text-style: bold; margin-bottom: 1; }
