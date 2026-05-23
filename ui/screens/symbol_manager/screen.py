@@ -5,6 +5,7 @@ from textual.widgets import DataTable, Footer, Input, Label
 
 from repositories import symbol_repo
 from services.symbol_service import SymbolService
+from ui.components.confirm_modal import ConfirmModal
 from .constants import BINDINGS, COL_SYMBOL, COL_TAGS
 from .styles import CSS
 
@@ -55,8 +56,14 @@ class SymbolManagerScreen(ModalScreen):
         row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
         if row_key.value is None:
             return
-        self._service.remove(row_key.value)
-        self._refresh_table()
+        symbol = row_key.value
+
+        def _on_confirm(confirmed: bool | None) -> None:
+            if confirmed:
+                self._service.remove(symbol)
+                self._refresh_table()
+
+        self.app.push_screen(ConfirmModal(f"Remove {symbol}?"), _on_confirm)
 
     def action_dismiss_screen(self) -> None:
         self.dismiss()
