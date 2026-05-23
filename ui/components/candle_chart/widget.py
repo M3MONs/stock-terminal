@@ -8,7 +8,6 @@ from .styles import CSS
 
 PRICE_AXIS_WIDTH = 9
 LABEL_INTERVAL_ROWS = 5
-ZOOM_STEP = 10
 PAN_STEP = 10
 MIN_VISIBLE = 10
 DATE_LABEL_LEN = 5
@@ -23,35 +22,32 @@ class CandleChartWidget(Widget):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._series: OHLCVSeries | None = None
-        self._visible_count: int | None = None
+        self._candle_w: int = 1
         self._offset: int = 0
 
     def update(self, series: OHLCVSeries) -> None:
         self._series = series
-        self._visible_count = None
         self._offset = 0
+        chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
+        n = len(series.candles)
+        self._candle_w = max(1, int(chart_w / n + 0.5)) if n > 0 else 1
         self.refresh()
 
     def zoom_in(self) -> None:
         chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
-        current = self._visible_count or chart_w
-        self._visible_count = max(MIN_VISIBLE, current - ZOOM_STEP)
+        self._candle_w = min(chart_w // MIN_VISIBLE, self._candle_w + 1)
         self.refresh()
 
     def zoom_out(self) -> None:
-        if self._series is None:
-            return
-        chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
-        current = self._visible_count or chart_w
-        self._visible_count = min(len(self._series.candles), current + ZOOM_STEP)
+        self._candle_w = max(1, self._candle_w - 1)
         self.refresh()
 
     def pan_left(self) -> None:
         if self._series is None:
             return
         chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
-        visible = self._visible_count or chart_w
-        max_offset = max(0, len(self._series.candles) - visible)
+        n_fit = chart_w // self._candle_w
+        max_offset = max(0, len(self._series.candles) - n_fit)
         self._offset = min(self._offset + PAN_STEP, max_offset)
         self.refresh()
 
@@ -70,13 +66,6 @@ class CandleChartWidget(Widget):
 
     # --- private helpers ---
 
-    def _get_visible_candles(self, series: OHLCVSeries, chart_w: int) -> list[Candle]:
-        total = len(series.candles)
-        visible = self._visible_count or chart_w
-        end = total - self._offset
-        start = max(0, end - visible)
-        return series.candles[start:end]
-
     @staticmethod
     def _price_bounds(candles: list[Candle]) -> tuple[float, float, float]:
         lows = [float(c.low) for c in candles]
@@ -93,17 +82,17 @@ class CandleChartWidget(Widget):
         chart_h: int,
         price_max: float,
         price_range: float,
+        candle_w: int,
     ) -> _Grid:
         def to_row(price: float) -> int:
             return int((price_max - price) / price_range * (chart_h - 1))
 
         grid: _Grid = [[(" ", "")] * chart_w for _ in range(chart_h)]
-        n = len(candles)
 
         for i, candle in enumerate(candles):
-            col_start = int(i * chart_w / n)
-            col_end = int((i + 1) * chart_w / n)
-            center = (col_start + col_end - 1) // 2
+            col_start = i * candle_w
+            col_end = min(col_start + candle_w, chart_w)
+            center = col_start + (candle_w - 1) // 2
 
             o, h, l, c = (  # noqa: E741
                 float(candle.open),
@@ -155,19 +144,21 @@ class CandleChartWidget(Widget):
         candles: list[Candle],
         chart_w: int,
         has_axis: bool,
+        candle_w: int,
     ) -> None:
-        all_same_day = candles[0].timestamp.date() == candles[-1].timestamp.date()
-        date_fmt = "%H:%M" if all_same_day else "%m/%d"
-        n = len(candles)
-        chars_per_candle = chart_w / n
-        label_every = max(1, int((DATE_LABEL_LEN + 2) / chars_per_candle) + 1)
+        if len(candles) >= 2:
+            interval = candles[1].timestamp - candles[0].timestamp
+            intraday = interval.total_seconds() < 86400
+        else:
+            intraday = True
+        date_fmt = "%H:%M" if intraday else "%m/%d"
+        label_every = max(1, int((DATE_LABEL_LEN + 2) / candle_w) + 1)
 
         date_chars = [" "] * chart_w
         for i, candle in enumerate(candles):
             if i % label_every == 0:
-                col_start = int(i * chart_w / n)
-                col_end = int((i + 1) * chart_w / n)
-                center = (col_start + col_end - 1) // 2
+                col_start = i * candle_w
+                center = col_start + (candle_w - 1) // 2
                 label = candle.timestamp.strftime(date_fmt)
                 lstart = center - DATE_LABEL_LEN // 2
                 for j, ch in enumerate(label):
@@ -186,12 +177,19 @@ class CandleChartWidget(Widget):
         chart_w = W - PRICE_AXIS_WIDTH if has_axis else W
         chart_h = H - DATE_ROW
 
-        candles = self._get_visible_candles(series, chart_w)
+        candle_w = self._candle_w
+        n_fit = chart_w // candle_w
+
+        total = len(series.candles)
+        end = total - self._offset
+        start = max(0, end - n_fit)
+        candles = series.candles[start:end]
+
         if not candles:
             return Text("")
 
         _, price_max, price_range = self._price_bounds(candles)
-        grid = self._build_grid(candles, chart_w, chart_h, price_max, price_range)
+        grid = self._build_grid(candles, chart_w, chart_h, price_max, price_range, candle_w)
         text = self._build_chart_text(grid, chart_h, has_axis, price_max, price_range)
-        self._append_date_row(text, candles, chart_w, has_axis)
+        self._append_date_row(text, candles, chart_w, has_axis, candle_w)
         return text
