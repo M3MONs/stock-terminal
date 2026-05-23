@@ -10,7 +10,7 @@ from .constants import BINDINGS, COL_SYMBOL, COL_TAGS
 from .styles import CSS
 
 
-class SymbolManagerScreen(ModalScreen):
+class SymbolManagerScreen(ModalScreen[str | None]):
     DEFAULT_CSS = CSS
     BINDINGS = BINDINGS
 
@@ -65,5 +65,9 @@ class SymbolManagerScreen(ModalScreen):
 
         self.app.push_screen(ConfirmModal(f"Remove {symbol}?"), _on_confirm)
 
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        if event.row_key.value:
+            self.dismiss(event.row_key.value)
+
     def action_dismiss_screen(self) -> None:
-        self.dismiss()
+        self.dismiss(None)
