@@ -12,6 +12,7 @@ PAN_STEP = 10
 MIN_VISIBLE = 10
 DATE_LABEL_LEN = 5
 DATE_ROW = 1
+CANDLE_GAP = 1
 
 _Grid = list[list[tuple[str, str]]]
 
@@ -30,7 +31,7 @@ class CandleChartWidget(Widget):
         self._offset = 0
         chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
         n = len(series.candles)
-        self._candle_w = max(1, int(chart_w / n + 0.5)) if n > 0 else 1
+        self._candle_w = max(1 + CANDLE_GAP, int(chart_w / n + 0.5)) if n > 0 else 1 + CANDLE_GAP
         self.refresh()
 
     def zoom_in(self) -> None:
@@ -39,7 +40,7 @@ class CandleChartWidget(Widget):
         self.refresh()
 
     def zoom_out(self) -> None:
-        self._candle_w = max(1, self._candle_w - 1)
+        self._candle_w = max(1 + CANDLE_GAP, self._candle_w - 1)
         self.refresh()
 
     def pan_left(self) -> None:
@@ -91,8 +92,9 @@ class CandleChartWidget(Widget):
 
         for i, candle in enumerate(candles):
             col_start = i * candle_w
-            col_end = min(col_start + candle_w, chart_w)
-            center = col_start + (candle_w - 1) // 2
+            body_w = candle_w - CANDLE_GAP
+            col_end = min(col_start + body_w, chart_w)
+            center = col_start + body_w // 2
 
             o, h, l, c = (  # noqa: E741
                 float(candle.open),
@@ -158,7 +160,7 @@ class CandleChartWidget(Widget):
         for i, candle in enumerate(candles):
             if i % label_every == 0:
                 col_start = i * candle_w
-                center = col_start + (candle_w - 1) // 2
+                center = col_start + candle_w // 2
                 label = candle.timestamp.strftime(date_fmt)
                 lstart = center - DATE_LABEL_LEN // 2
                 for j, ch in enumerate(label):
