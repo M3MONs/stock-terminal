@@ -1,3 +1,6 @@
+import importlib
+import pkgutil
+
 from data.adapters.base import DataAdapter
 from data.adapters.registry import get_adapter
 from data.base import DataSource
@@ -5,6 +8,21 @@ from models.ohlcv_series import OHLCVSeries
 from models.stock_meta import StockMeta
 from models.timeframe import Timeframe
 from data.registry import get_source
+
+
+def _autodiscover() -> None:
+    import data
+    import data.adapters
+
+    for _, name, _ in pkgutil.iter_modules(data.__path__):
+        if name not in ("base", "registry"):
+            importlib.import_module(f"data.{name}")
+    for _, name, _ in pkgutil.iter_modules(data.adapters.__path__):
+        if name not in ("base", "registry"):
+            importlib.import_module(f"data.adapters.{name}")
+
+
+_autodiscover()
 
 
 class StockDataService:
