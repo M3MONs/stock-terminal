@@ -1,6 +1,3 @@
-import data.mock  # noqa: F401 — registers MockDataSource
-import data.adapters.mock  # noqa: F401 — registers MockAdapter
-
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label
@@ -35,11 +32,12 @@ class ChartScreen(Screen):
     def on_mount(self) -> None:
         cfg = app_config.load()
         self._timeframe = cfg.default_timeframe
+        self._provider = cfg.provider or "mock"
         self._load_data(self._symbol)
 
     def _load_data(self, symbol: str) -> None:
         self.query_one(f"#{STATUS_ID}", Label).update(f"Loading {symbol} {self._timeframe}…")
-        service = create_service("mock")
+        service = create_service(self._provider)
         timeframe = self._timeframe
         self.run_worker(
             lambda: (service.get_ohlcv(symbol, timeframe), service.get_meta(symbol)),
