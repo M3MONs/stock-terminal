@@ -27,9 +27,13 @@ class MockAdapter(DataAdapter):
         return OHLCVSeries(symbol=symbol, timeframe=timeframe, candles=candles)
 
     def to_stock_meta(self, raw: dict[str, Any], symbol: str) -> StockMeta:
+        raw_price = raw.get("price")
+        raw_change = raw.get("change_pct")
         return StockMeta(
             symbol=symbol,
             name=raw.get("name"),
             exchange=raw.get("exchange"),
             currency=raw.get("currency", "USD"),
+            price=Decimal(str(raw_price)) if raw_price is not None else None,
+            change_pct=float(raw_change) if raw_change is not None else None,
         )
