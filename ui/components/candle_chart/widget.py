@@ -5,14 +5,15 @@ from textual.widget import Widget
 from models.ohlcv_series import OHLCVSeries
 from models.candle import Candle
 from .styles import CSS
-
-PRICE_AXIS_WIDTH = 9
-LABEL_INTERVAL_ROWS = 5
-PAN_STEP = 10
-MIN_VISIBLE = 10
-DATE_LABEL_LEN = 5
-DATE_ROW = 1
-CANDLE_GAP = 1
+from .constants import (
+    CANDLE_GAP,
+    DATE_LABEL_LEN,
+    DATE_ROW,
+    LABEL_INTERVAL_ROWS,
+    MIN_VISIBLE,
+    PAN_STEP,
+    PRICE_AXIS_WIDTH,
+)
 
 _Grid = list[list[tuple[str, str]]]
 
