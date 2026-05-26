@@ -10,4 +10,5 @@ ProviderPickerScreen {
         padding: 1 2;
     }
     ProviderPickerScreen > #dialog > #title { text-style: bold; margin-bottom: 1; }
+    ProviderPickerScreen ListItem.active Label { color: $success; text-style: bold; }
 """
