@@ -44,6 +44,7 @@ class ChartScreen(Screen):
             thread=True,
             name="load_chart",
             exclusive=True,
+            exit_on_error=False,
         )
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
