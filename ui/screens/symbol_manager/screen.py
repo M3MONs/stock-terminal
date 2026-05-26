@@ -3,9 +3,11 @@ from textual.containers import Vertical
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Input, Label
 
+from config import config as app_config
 from repositories import symbol_repo
 from services.symbol_service import SymbolService
 from ui.components.confirm_modal import ConfirmModal
+from validators import get_validator
 from .constants import BINDINGS, COL_SYMBOL, COL_TAGS
 from .styles import CSS
 
@@ -16,7 +18,8 @@ class SymbolManagerScreen(ModalScreen[str | None]):
 
     def __init__(self) -> None:
         super().__init__()
-        self._service = SymbolService(symbol_repo)
+        cfg = app_config.load()
+        self._service = SymbolService(symbol_repo, get_validator(cfg.provider))
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
@@ -40,6 +43,7 @@ class SymbolManagerScreen(ModalScreen[str | None]):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         symbol = event.value.strip().upper()
         status = self.query_one("#status", Label)
+        status.update(f"Validating {symbol}…")
         try:
             self._service.add(symbol)
         except ValueError as e:
