@@ -2,6 +2,7 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
 from config import config as app_config
+from ui.components.confirm_modal import ConfirmModal
 from ui.components.stock_grid import StockGridWidget
 from ui.components.stock_grid.widget import StockCard
 from ui.screens.chart import ChartScreen
@@ -12,7 +13,7 @@ from ui.screens.symbol_manager import SymbolManagerScreen
 class Dashboard(App):
     TITLE = "Stock-Terminal"
     BINDINGS = [
-        ("q", "quit", "Quit"),
+        ("q", "request_quit", "Quit"),
         ("s", "push_symbols", "Symbols"),
         ("p", "pick_provider", "Provider"),
     ]
@@ -40,6 +41,13 @@ class Dashboard(App):
 
     def on_stock_card_selected(self, event: StockCard.Selected) -> None:
         self.push_screen(ChartScreen(event.symbol))
+
+    def action_request_quit(self) -> None:
+        if len(self.screen_stack) == 1:
+            def _on_confirm(confirmed: bool | None) -> None:
+                if confirmed:
+                    self.exit()
+            self.push_screen(ConfirmModal("Quit the app?"), _on_confirm)
 
     def action_pick_provider(self) -> None:
         def _cb(provider: str | None) -> None:
