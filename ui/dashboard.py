@@ -3,6 +3,7 @@ from textual.widgets import Footer, Header
 
 from config import config as app_config
 from ui.components.stock_grid import StockGridWidget
+from ui.components.stock_grid.widget import StockCard
 from ui.screens.chart import ChartScreen
 from ui.screens.provider_picker import ProviderPickerScreen
 from ui.screens.symbol_manager import SymbolManagerScreen
@@ -36,6 +37,9 @@ class Dashboard(App):
                 self.push_screen(ChartScreen(symbol))
 
         self.push_screen(SymbolManagerScreen(), _cb)
+
+    def on_stock_card_selected(self, event: StockCard.Selected) -> None:
+        self.push_screen(ChartScreen(event.symbol))
 
     def action_pick_provider(self) -> None:
         def _cb(provider: str | None) -> None:
