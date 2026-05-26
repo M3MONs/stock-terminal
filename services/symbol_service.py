@@ -1,5 +1,6 @@
 from models.tagged_symbol import TaggedSymbol
-from validators.validators import DefaultSymbolValidator, SymbolValidator
+from validators.base import SymbolValidator
+from validators.default import DefaultSymbolValidator
 from repositories.symbol_repository import SymbolRepository
 
 
