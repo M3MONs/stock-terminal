@@ -1,5 +1,7 @@
 from textual.app import ComposeResult
 from textual.containers import Grid
+from textual.events import Click, Key
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, Static
 from textual.worker import Worker, WorkerState
@@ -25,10 +27,23 @@ from .styles import CSS
 
 class StockCard(Widget):
     DEFAULT_CSS = CSS
+    can_focus = True
+
+    class Selected(Message):
+        def __init__(self, symbol: str) -> None:
+            super().__init__()
+            self.symbol = symbol
 
     def __init__(self, symbol: str) -> None:
         super().__init__(classes=CARD_CLASS)
         self._symbol = symbol
+
+    def on_click(self, event: Click) -> None:
+        self.post_message(self.Selected(self._symbol))
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "enter":
+            self.post_message(self.Selected(self._symbol))
 
     def compose(self) -> ComposeResult:
         yield Label(self._symbol, classes=CLASS_SYMBOL)
