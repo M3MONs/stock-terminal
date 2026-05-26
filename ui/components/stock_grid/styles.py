@@ -18,6 +18,9 @@ StockGridWidget {
 .stock-card:hover {
     border: solid $accent;
 }
+.stock-card:focus {
+    border: solid $accent;
+}
 .stock-card .card-symbol {
     text-style: bold;
 }
