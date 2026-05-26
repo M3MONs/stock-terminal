@@ -39,9 +39,13 @@ class MockDataSource(DataSource):
         return candle, close
 
     def fetch_meta(self, symbol: str) -> dict[str, Any]:
+        price = round(random.uniform(10.0, 500.0), 2)
+        change_pct = round(random.uniform(-5.0, 5.0), 2)
         return {
             "symbol": symbol,
             "name": f"{symbol} Corp",
             "exchange": "MOCK",
             "currency": "USD",
+            "price": price,
+            "change_pct": change_pct,
         }
