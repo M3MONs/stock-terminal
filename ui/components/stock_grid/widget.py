@@ -74,6 +74,7 @@ class StockCard(Widget):
 
 class StockGridWidget(Widget):
     DEFAULT_CSS = CSS
+    can_focus = True
 
     def compose(self) -> ComposeResult:
         yield Grid(id=CARDS_GRID_ID)
