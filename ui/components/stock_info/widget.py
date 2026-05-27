@@ -5,7 +5,19 @@ from textual.widgets import Label, Rule
 from models.ohlcv_series import OHLCVSeries
 from ui.components.stock_info.styles import CSS
 
-_CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥"}
+_CURRENCY_SYMBOLS = {
+    "USD": "$",
+    "EUR": "€",
+    "GBP": "£",
+    "JPY": "¥",
+    "PLN": "zł",
+    "CHF": "Fr",
+    "CAD": "C$",
+    "AUD": "A$",
+    "SEK": "kr",
+    "NOK": "kr",
+    "DKK": "kr",
+}
 
 
 class StockInfoPanel(Widget):
