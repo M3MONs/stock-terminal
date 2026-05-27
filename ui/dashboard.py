@@ -26,6 +26,13 @@ class Dashboard(App):
     def on_mount(self) -> None:
         self._refresh_subtitle()
         self.query_one(StockGridWidget).load()
+        self.call_after_refresh(self._restore_grid_focus)
+
+    def _restore_grid_focus(self) -> None:
+        grid = self.query_one(StockGridWidget)
+        cards = list(grid.query(StockCard))
+        if cards:
+            cards[0].focus()
 
     def _refresh_subtitle(self) -> None:
         cfg = app_config.load()
@@ -33,7 +40,9 @@ class Dashboard(App):
 
     def action_push_symbols(self) -> None:
         def _cb(symbol: str | None) -> None:
-            self.query_one(StockGridWidget).load()
+            grid = self.query_one(StockGridWidget)
+            grid.load()
+            self.call_after_refresh(self._restore_grid_focus)
             if symbol:
                 self.push_screen(ChartScreen(symbol))
 
@@ -52,6 +61,8 @@ class Dashboard(App):
     def action_pick_provider(self) -> None:
         def _cb(provider: str | None) -> None:
             self._refresh_subtitle()
-            self.query_one(StockGridWidget).load()
+            grid = self.query_one(StockGridWidget)
+            grid.load()
+            self.call_after_refresh(self._restore_grid_focus)
 
         self.push_screen(ProviderPickerScreen(), _cb)
