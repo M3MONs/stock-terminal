@@ -33,6 +33,8 @@ class Dashboard(App):
         cards = list(grid.query(StockCard))
         if cards:
             cards[0].focus()
+        else:
+            grid.focus()
 
     def _refresh_subtitle(self) -> None:
         cfg = app_config.load()
@@ -42,7 +44,7 @@ class Dashboard(App):
         def _cb(symbol: str | None) -> None:
             grid = self.query_one(StockGridWidget)
             grid.load()
-            self.call_after_refresh(self._restore_grid_focus)
+            self.set_timer(0.05, self._restore_grid_focus)
             if symbol:
                 self.push_screen(ChartScreen(symbol))
 
@@ -63,6 +65,6 @@ class Dashboard(App):
             self._refresh_subtitle()
             grid = self.query_one(StockGridWidget)
             grid.load()
-            self.call_after_refresh(self._restore_grid_focus)
+            self.set_timer(0.05, self._restore_grid_focus)
 
         self.push_screen(ProviderPickerScreen(), _cb)
