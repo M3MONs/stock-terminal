@@ -37,6 +37,7 @@ class StockCard(Widget):
     def __init__(self, symbol: str) -> None:
         super().__init__(classes=CARD_CLASS)
         self._symbol = symbol
+        self._safe_id = symbol.replace(".", "-")
 
     def on_click(self, event: Click) -> None:
         self.post_message(self.Selected(self._symbol))
@@ -47,12 +48,12 @@ class StockCard(Widget):
 
     def compose(self) -> ComposeResult:
         yield Label(self._symbol, classes=CLASS_SYMBOL)
-        yield Label("loading…", classes=CLASS_LOADING, id=f"{PRICE_ID_PREFIX}{self._symbol}")
-        yield Label("", id=f"{CHANGE_ID_PREFIX}{self._symbol}")
+        yield Label("loading…", classes=CLASS_LOADING, id=f"{PRICE_ID_PREFIX}{self._safe_id}")
+        yield Label("", id=f"{CHANGE_ID_PREFIX}{self._safe_id}")
 
     def update(self, meta: StockMeta) -> None:
-        price_label = self.query_one(f"#{PRICE_ID_PREFIX}{self._symbol}", Label)
-        change_label = self.query_one(f"#{CHANGE_ID_PREFIX}{self._symbol}", Label)
+        price_label = self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label)
+        change_label = self.query_one(f"#{CHANGE_ID_PREFIX}{self._safe_id}", Label)
 
         if meta.price is not None:
             price_label.remove_class(CLASS_LOADING)
@@ -69,7 +70,7 @@ class StockCard(Widget):
             change_label.update(f"{arrow} {abs(meta.change_pct):.2f}%")
 
     def set_error(self) -> None:
-        self.query_one(f"#{PRICE_ID_PREFIX}{self._symbol}", Label).update("error")
+        self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label).update("error")
 
 
 class StockGridWidget(Widget):
