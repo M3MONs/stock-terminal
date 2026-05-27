@@ -12,6 +12,7 @@ from .constants import (
     LABEL_INTERVAL_ROWS,
     MIN_VISIBLE,
     PAN_STEP,
+    PRICE_PADDING_RATIO,
     PRICE_AXIS_WIDTH,
 )
 
@@ -27,17 +28,23 @@ class CandleChartWidget(Widget):
         self._candle_w: int = 1
         self._offset: int = 0
 
+    def _chart_width(self) -> int:
+        """Return drawable chart width consistent with render() axis logic."""
+        width = self.content_size.width
+        return width - PRICE_AXIS_WIDTH if width > PRICE_AXIS_WIDTH else max(1, width)
+
     def update(self, series: OHLCVSeries) -> None:
         self._series = series
         self._offset = 0
-        chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
+        chart_w = self._chart_width()
         n = len(series.candles)
         self._candle_w = max(1 + CANDLE_GAP, int(chart_w / n + 0.5)) if n > 0 else 1 + CANDLE_GAP
         self.refresh()
 
     def zoom_in(self) -> None:
-        chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
-        self._candle_w = min(chart_w // MIN_VISIBLE, self._candle_w + 1)
+        chart_w = self._chart_width()
+        max_candle_w = max(1 + CANDLE_GAP, chart_w // MIN_VISIBLE)
+        self._candle_w = min(max_candle_w, self._candle_w + 1)
         self.refresh()
 
     def zoom_out(self) -> None:
@@ -47,8 +54,8 @@ class CandleChartWidget(Widget):
     def pan_left(self) -> None:
         if self._series is None:
             return
-        chart_w = max(1, self.size.width - PRICE_AXIS_WIDTH)
-        n_fit = chart_w // self._candle_w
+        chart_w = self._chart_width()
+        n_fit = max(1, chart_w // self._candle_w)
         max_offset = max(0, len(self._series.candles) - n_fit)
         self._offset = min(self._offset + PAN_STEP, max_offset)
         self.refresh()
@@ -60,8 +67,8 @@ class CandleChartWidget(Widget):
     def render(self) -> RenderResult:
         if self._series is None or not self._series.candles:
             return Text("No data", justify="center")
-        W = self.size.width
-        H = self.size.height
+        W = self.content_size.width
+        H = self.content_size.height
         if W == 0 or H <= DATE_ROW:
             return Text("")
         return self._build_chart(self._series, W, H)
@@ -73,9 +80,20 @@ class CandleChartWidget(Widget):
         """Return (price_min, price_max, price_range) for the given candles."""
         lows = [float(c.low) for c in candles]
         highs = [float(c.high) for c in candles]
-        price_min = min(lows)
-        price_max = max(highs)
-        price_range = price_max - price_min or 1e-9
+        raw_min = min(lows)
+        raw_max = max(highs)
+        raw_range = raw_max - raw_min
+
+        # Add symmetric headroom so candles don't touch top/bottom chart edges.
+        if raw_range > 0:
+            pad = raw_range * PRICE_PADDING_RATIO
+        else:
+            baseline = max(abs(raw_max), 1.0)
+            pad = baseline * PRICE_PADDING_RATIO
+
+        price_min = raw_min - pad
+        price_max = raw_max + pad
+        price_range = price_max - price_min
         return price_min, price_max, price_range
 
     @staticmethod
@@ -99,7 +117,8 @@ class CandleChartWidget(Widget):
     ) -> None:
         """Render a single candle (wick + body) into *grid* in-place."""
         def p2r(price: float) -> int:
-            return int((price_max - price) / price_range * (chart_h - 1))
+            row = int((price_max - price) / price_range * (chart_h - 1))
+            return max(0, min(chart_h - 1, row))
 
         o, h, l, c = (  # noqa: E741
             float(candle.open),
@@ -113,7 +132,10 @@ class CandleChartWidget(Widget):
         wick_bottom = p2r(l)
         body_top = min(p2r(o), p2r(c))
         body_bottom = max(p2r(o), p2r(c))
+        if center < 0 or center >= chart_w:
+            return
         col_end = min(col_start + body_w, chart_w)
+        col_start = max(0, col_start)
 
         for row in range(wick_top, wick_bottom + 1):
             grid[row][center] = ("│", color)
@@ -159,10 +181,11 @@ class CandleChartWidget(Widget):
                 text.append("│", style="dim")
                 price = price_max - (row_idx / max(chart_h - 1, 1)) * price_range
                 if row_idx % label_interval == 0:
-                    text.append(f"{price:>8.2f}")
+                    text.append(f"{price:^8.2f}")
                 else:
                     text.append(" " * 8)
-            text.append("\n")
+            if row_idx < chart_h - 1:
+                text.append("\n")
         return text
 
     @staticmethod
@@ -234,7 +257,7 @@ class CandleChartWidget(Widget):
         chart_h = H - DATE_ROW
 
         candle_w = self._candle_w
-        n_fit = chart_w // candle_w
+        n_fit = max(1, chart_w // candle_w)
 
         total = len(series.candles)
         end = total - self._offset
@@ -247,5 +270,8 @@ class CandleChartWidget(Widget):
         _, price_max, price_range = self._price_bounds(candles)
         grid = self._build_grid(candles, chart_w, chart_h, price_max, price_range, candle_w)
         text = self._build_chart_text(grid, chart_h, has_axis, price_max, price_range)
+        text.append("\n")
+        separator_chars = ["─"] * chart_w
+        self._append_text_row(text, separator_chars, has_axis, with_newline=True)
         self._append_date_row(text, candles, chart_w, has_axis, candle_w)
         return text

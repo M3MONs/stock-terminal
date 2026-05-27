@@ -2,6 +2,6 @@ CSS = """
 CandleChartWidget {
     width: 1fr;
     height: 1fr;
-    padding: 1 0;
+    padding: 0;
 }
 """
