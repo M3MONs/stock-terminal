@@ -1,5 +1,6 @@
 from textual.app import ComposeResult
 from textual.containers import Vertical
+from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Input, Label
 
@@ -75,3 +76,8 @@ class SymbolManagerScreen(ModalScreen[str | None]):
 
     def action_dismiss_screen(self) -> None:
         self.dismiss(None)
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            event.stop()
+            self.dismiss(None)
