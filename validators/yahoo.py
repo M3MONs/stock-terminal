@@ -15,9 +15,16 @@ class YahooSymbolValidator(SymbolValidator):
         if not _YAHOO_SYMBOL_RE.match(symbol):
             return "Symbol must be 1-15 chars: letters, digits, dot, or hyphen"
         try:
-            price = yf.Ticker(symbol).fast_info.last_price
+            ticker = yf.Ticker(symbol)
+            price = ticker.fast_info.last_price
         except Exception:
             return f"Symbol not found on Yahoo Finance: {symbol}"
         if price is None:
+            try:
+                info = ticker.info
+                if info.get("symbol") or info.get("longName") or info.get("shortName"):
+                    return None
+            except Exception:
+                pass
             return f"Symbol not found on Yahoo Finance: {symbol}"
         return None
