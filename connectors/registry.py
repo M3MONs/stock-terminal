@@ -14,10 +14,10 @@ def register_connector(name: str) -> Callable[..., type[BaseAgentConnector]]:
     return decorator
 
 
-def get_connector(name: str) -> BaseAgentConnector:
+def get_connector(name: str, **kwargs) -> BaseAgentConnector:
     if name not in _connectors:
         raise KeyError(f"Connector '{name}' not registered. Available: {list(_connectors)}")
-    return _connectors[name]()
+    return _connectors[name](**kwargs)
 
 
 def list_connectors() -> list[str]:
