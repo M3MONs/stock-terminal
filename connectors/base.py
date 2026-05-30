@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import TypeVar
+
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
+
+
+class BaseAgentConnector(ABC):
+    def __init__(self, model_name: str, temperature: float = 0.0, **kwargs) -> None:
+        self.model_name = model_name
+        self.temperature = temperature
+        self.config = kwargs
+
+    @abstractmethod
+    def generate_structured(self, prompt: str, response_model: type[T], **kwargs) -> T: ...
+
+
+class ConnectorError(Exception): ...
