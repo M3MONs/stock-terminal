@@ -75,7 +75,7 @@ class AgentManagerScreen(ModalScreen[None]):
         agent = next((a for a in self._service.get_all() if a.id == agent_id), None)
         if agent is None:
             return
-        self.app.push_screen(AgentEditorModal(agent.name, agent.file_path))
+        self.app.push_screen(AgentEditorModal(agent.name, agent.file_path, self._service))
 
     def action_delete_agent(self) -> None:
         agent_id = self._selected_agent_id()
