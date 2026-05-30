@@ -5,31 +5,18 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, TextArea
 
-CSS = """
-AgentEditorModal {
-    align: center middle;
-}
-AgentEditorModal > #dialog {
-    width: 90;
-    height: 80%;
-    border: solid $accent;
-    background: $surface;
-    padding: 1 2;
-}
-AgentEditorModal > #dialog > #title { text-style: bold; margin-bottom: 1; }
-AgentEditorModal > #dialog > #editor { height: 1fr; }
-AgentEditorModal > #dialog > #buttons { height: 3; margin-top: 1; }
-AgentEditorModal > #dialog > #buttons > Button { margin-right: 1; }
-"""
+from services.agent_service import AgentService
+from ui.screens.agent_manager.constants import EDITOR_CSS
 
 
 class AgentEditorModal(ModalScreen[bool]):
-    DEFAULT_CSS = CSS
+    DEFAULT_CSS = EDITOR_CSS
 
-    def __init__(self, name: str, file_path: str) -> None:
+    def __init__(self, name: str, file_path: str, service: AgentService) -> None:
         super().__init__()
         self._name = name
         self._file_path = Path(file_path)
+        self._service = service
 
     def compose(self) -> ComposeResult:
         content = self._file_path.read_text() if self._file_path.exists() else f"# {self._name}\n\n"
@@ -43,7 +30,7 @@ class AgentEditorModal(ModalScreen[bool]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "save":
             text = self.query_one("#editor", TextArea).text
-            self._file_path.write_text(text)
+            self._service.update_content(str(self._file_path), text)
             self.dismiss(True)
         else:
             self.dismiss(False)
