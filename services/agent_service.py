@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from db import AGENTS_DIR
 from models.user_agent import UserAgent
 from repositories.user_agent_repository import UserAgentRepository
@@ -21,3 +23,6 @@ class AgentService:
 
     def set_enabled(self, agent_id: int, enabled: bool) -> None:
         self._repository.set_enabled(agent_id, enabled)
+
+    def update_content(self, file_path: str, text: str) -> None:
+        Path(file_path).write_text(text)
