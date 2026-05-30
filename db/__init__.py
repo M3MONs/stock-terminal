@@ -8,6 +8,7 @@ _DB_DIR_NAME = ".stock-terminal"
 _DB_MIGRATION_DIR_NAME = "migrations"
 _DB_PATH = Path.home() / _DB_DIR_NAME / _DB_NAME
 _MIGRATIONS_PATH = Path(__file__).parent.parent / _DB_MIGRATION_DIR_NAME
+AGENTS_DIR = Path.home() / _DB_DIR_NAME / "agents"
 
 
 def get_connection() -> sqlite3.Connection:
@@ -19,6 +20,7 @@ def get_connection() -> sqlite3.Connection:
 
 def init_db() -> None:
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    AGENTS_DIR.mkdir(parents=True, exist_ok=True)
     backend = get_backend(f"sqlite:///{_DB_PATH}")
     migrations = read_migrations(str(_MIGRATIONS_PATH))
     with backend.lock():
