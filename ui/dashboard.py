@@ -5,6 +5,7 @@ from config import config as app_config
 from ui.components.confirm_modal import ConfirmModal
 from ui.components.stock_grid import StockGridWidget
 from ui.components.stock_grid.widget import StockCard
+from ui.screens.agent_manager import AgentManagerScreen
 from ui.screens.chart import ChartScreen
 from ui.screens.provider_picker import ProviderPickerScreen
 from ui.screens.symbol_manager import SymbolManagerScreen
@@ -16,6 +17,7 @@ class Dashboard(App):
         ("q", "request_quit", "Quit"),
         ("s", "push_symbols", "Symbols"),
         ("p", "pick_provider", "Provider"),
+        ("a", "push_agents", "Agents"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -68,3 +70,6 @@ class Dashboard(App):
             self.set_timer(0.05, self._restore_grid_focus)
 
         self.push_screen(ProviderPickerScreen(), _cb)
+
+    def action_push_agents(self) -> None:
+        self.push_screen(AgentManagerScreen())
