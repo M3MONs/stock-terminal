@@ -7,6 +7,7 @@ from ui.components.stock_grid import StockGridWidget
 from ui.components.stock_grid.widget import StockCard
 from ui.screens.agent_manager import AgentManagerScreen
 from ui.screens.chart import ChartScreen
+from ui.screens.connector_picker import ConnectorPickerScreen
 from ui.screens.provider_picker import ProviderPickerScreen
 from ui.screens.symbol_manager import SymbolManagerScreen
 
@@ -18,6 +19,7 @@ class Dashboard(App):
         ("s", "push_symbols", "Symbols"),
         ("p", "pick_provider", "Provider"),
         ("a", "push_agents", "Agents"),
+        ("c", "pick_connector", "Connector"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -73,3 +75,6 @@ class Dashboard(App):
 
     def action_push_agents(self) -> None:
         self.push_screen(AgentManagerScreen())
+
+    def action_pick_connector(self) -> None:
+        self.push_screen(ConnectorPickerScreen())
