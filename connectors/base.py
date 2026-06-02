@@ -17,5 +17,8 @@ class BaseAgentConnector(ABC):
     @abstractmethod
     def generate_structured(self, prompt: str, response_model: type[T], **kwargs) -> T: ...
 
+    def ping(self) -> None:
+        raise ConnectorError("ping not supported by this connector")
+
 
 class ConnectorError(Exception): ...
