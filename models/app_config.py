@@ -8,3 +8,4 @@ class AppConfig(BaseModel):
     default_timeframe: Timeframe = Timeframe.H1
     refresh_interval: int = 300
     theme: str = "dark"
+    connector: str = "gemini"
