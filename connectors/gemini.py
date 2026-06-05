@@ -10,7 +10,7 @@ from connectors.registry import register_connector
 T = TypeVar("T", bound=BaseModel)
 
 
-@register_connector("gemini")
+@register_connector("gemini", key_field="gemini_api_key")
 class GeminiConnector(BaseAgentConnector):
     def __init__(
         self,
