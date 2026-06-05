@@ -9,3 +9,7 @@ class AppConfig(BaseModel):
     refresh_interval: int = 300
     theme: str = "dark"
     connector: str = "gemini"
+    signal_interval: int = 60
+    signal_timeframe_fast: Timeframe = Timeframe.M15
+    signal_timeframe_slow: Timeframe = Timeframe.H4
+    signal_agent: str = ""
