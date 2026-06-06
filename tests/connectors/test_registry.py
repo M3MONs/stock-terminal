@@ -1,7 +1,7 @@
 import pytest
 
 from connectors.base import BaseAgentConnector, ConnectorError
-from connectors.registry import get_connector, list_connectors, register_connector
+from connectors.registry import get_connector, get_connector_key_field, list_connectors, register_connector
 
 
 class _DummyConnector(BaseAgentConnector):
@@ -30,3 +30,20 @@ def test_list_connectors_returns_list():
 def test_connector_error_is_exception():
     with pytest.raises(ConnectorError):
         raise ConnectorError("test error")
+
+
+def test_register_connector_with_key_field():
+    register_connector("_test_keyed", key_field="my_api_key")(_DummyConnector)
+    assert get_connector_key_field("_test_keyed") == "my_api_key"
+
+
+def test_get_connector_key_field_unknown_returns_empty():
+    assert get_connector_key_field("_nonexistent_xyz") == ""
+
+
+def test_gemini_key_field():
+    assert get_connector_key_field("gemini") == "gemini_api_key"
+
+
+def test_deepseek_key_field():
+    assert get_connector_key_field("deepseek") == "deepseek_api_key"
