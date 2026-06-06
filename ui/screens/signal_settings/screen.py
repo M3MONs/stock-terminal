@@ -1,3 +1,5 @@
+from typing import Any
+
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.screen import ModalScreen
@@ -10,6 +12,23 @@ from .constants import BINDINGS
 from .styles import CSS
 
 _NO_AGENT = ""
+_LIST_CONFIG = {
+    "agent-list": (
+        "signal_agent",
+        lambda value: value or _NO_AGENT,
+        "agent",
+    ),
+    "fast-tf-list": (
+        "signal_timeframe_fast",
+        lambda value: Timeframe(value) if value else None,
+        "fast",
+    ),
+    "slow-tf-list": (
+        "signal_timeframe_slow",
+        lambda value: Timeframe(value) if value else None,
+        "slow",
+    ),
+}
 
 
 class SignalSettingsScreen(ModalScreen[None]):
@@ -38,72 +57,121 @@ class SignalSettingsScreen(ModalScreen[None]):
         yield Footer()
 
     def _agent_items(self) -> list[ListItem]:
-        current = self._cfg.signal_agent
-        items = []
-        none_label = "● (none)" if current == _NO_AGENT else "  (none)"
-        none_item = ListItem(Label(none_label), name=_NO_AGENT)
-        if current == _NO_AGENT:
-            none_item.add_class("active")
-        items.append(none_item)
-        for agent in user_agent_repo.get_all():
-            label = f"● {agent.name}" if agent.name == current else f"  {agent.name}"
-            item = ListItem(Label(label), name=agent.name)
-            if agent.name == current:
-                item.add_class("active")
-            items.append(item)
-        return items
+        values = [(_NO_AGENT, "(none)")]
+
+        values.extend(
+            (agent.name, agent.name)
+            for agent in user_agent_repo.get_all()
+        )
+
+        return self._build_list_items(
+            values,
+            self._cfg.signal_agent,
+        )
 
     def _tf_items(self, which: str) -> list[ListItem]:
-        current = self._cfg.signal_timeframe_fast if which == "fast" else self._cfg.signal_timeframe_slow
+        current = (
+            self._cfg.signal_timeframe_fast
+            if which == "fast"
+            else self._cfg.signal_timeframe_slow
+        )
+
+        values = [
+            (tf.value, tf.value)
+            for tf in Timeframe
+        ]
+
+        return self._build_list_items(
+            values,
+            current.value,
+        )
+
+    def _build_list_items(
+        self,
+        values: list[tuple[str, str]],
+        current: str,
+    ) -> list[ListItem]:
         items = []
-        for tf in Timeframe:
-            label = f"● {tf.value}" if tf == current else f"  {tf.value}"
-            item = ListItem(Label(label), name=tf.value)
-            if tf == current:
+
+        for name, display in values:
+            is_active = name == current
+
+            item = ListItem(
+                Label(f"● {display}" if is_active else f"  {display}"),
+                name=name,
+            )
+
+            if is_active:
                 item.add_class("active")
+
             items.append(item)
+
         return items
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if not event.item.name and event.list_view.id != "agent-list":
+        if event.list_view.id is None or event.item.name is None:
             return
-        list_id = event.list_view.id
-        if list_id == "agent-list":
-            self._cfg = self._cfg.model_copy(update={"signal_agent": event.item.name or _NO_AGENT})
-            self._refresh_list("agent-list", "agent")
+
+        config = _LIST_CONFIG.get(event.list_view.id)
+
+        if config is None:
             return
-        tf = Timeframe(event.item.name)
-        if list_id == "fast-tf-list":
-            self._cfg = self._cfg.model_copy(update={"signal_timeframe_fast": tf})
-            self._refresh_list("fast-tf-list", "fast")
-        elif list_id == "slow-tf-list":
-            self._cfg = self._cfg.model_copy(update={"signal_timeframe_slow": tf})
-            self._refresh_list("slow-tf-list", "slow")
+
+        cfg_field, converter, refresh_mode = config
+
+        value = converter(event.item.name)
+
+        if value is None:
+            return
+
+        self._update_cfg_and_refresh(
+            cfg_field,
+            value,
+            event.list_view.id,
+            refresh_mode,
+        )
+
+    def _update_cfg_and_refresh(
+        self,
+        cfg_field: str,
+        cfg_value: Any,
+        list_id: str,
+        refresh_mode: str,
+    ) -> None:
+        self._cfg = self._cfg.model_copy(update={cfg_field: cfg_value})
+        self._refresh_list(list_id, refresh_mode)
 
     def _refresh_list(self, list_id: str, which: str) -> None:
         lv = self.query_one(f"#{list_id}", ListView)
         lv.clear()
-        if which == "agent":
-            for item in self._agent_items():
-                lv.append(item)
-        else:
-            for item in self._tf_items(which):
-                lv.append(item)
+        self._append_list_view(lv, self._agent_items() if which == "agent" else self._tf_items(which))
+
+    def _append_list_view(self, lv: ListView, items: list[ListItem]) -> None:
+        for item in items:
+            lv.append(item)
 
     def action_save(self) -> None:
         interval_input = self.query_one("#interval-input", Input)
-        try:
-            interval = int(interval_input.value.strip())
-        except ValueError:
-            interval = self._cfg.signal_interval
-        cfg = app_config.load().model_copy(update={
-            "signal_interval": interval,
-            "signal_timeframe_fast": self._cfg.signal_timeframe_fast,
-            "signal_timeframe_slow": self._cfg.signal_timeframe_slow,
-            "signal_agent": self._cfg.signal_agent,
-        })
-        app_config.save(cfg)
+        interval = self._get_interval_from_input(interval_input)
+        self._save_cfg_signal(interval)
         self.dismiss(None)
+
+    def _get_interval_from_input(self, interval_input: Input) -> int:
+        try:
+            return int(interval_input.value.strip())
+        except ValueError:
+            return self._cfg.signal_interval
+
+    def _save_cfg_signal(self, interval: int) -> None:
+        cfg = app_config.load().model_copy(
+            update={
+                "signal_interval": interval,
+                "signal_timeframe_fast": self._cfg.signal_timeframe_fast,
+                "signal_timeframe_slow": self._cfg.signal_timeframe_slow,
+                "signal_agent": self._cfg.signal_agent,
+            }
+        )
+        app_config.save(cfg)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         event.stop()
