@@ -9,6 +9,7 @@ from ui.screens.agent_manager import AgentManagerScreen
 from ui.screens.chart import ChartScreen
 from ui.screens.connector_picker import ConnectorPickerScreen
 from ui.screens.provider_picker import ProviderPickerScreen
+from ui.screens.signal_settings import SignalSettingsScreen
 from ui.screens.symbol_manager import SymbolManagerScreen
 
 
@@ -20,6 +21,7 @@ class Dashboard(App):
         ("p", "pick_provider", "Provider"),
         ("a", "push_agents", "Agents"),
         ("c", "pick_connector", "Connector"),
+        ("i", "signal_settings", "Signals"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -78,3 +80,6 @@ class Dashboard(App):
 
     def action_pick_connector(self) -> None:
         self.push_screen(ConnectorPickerScreen())
+
+    def action_signal_settings(self) -> None:
+        self.push_screen(SignalSettingsScreen())
