@@ -11,12 +11,12 @@ class UserAgentRecommendationRepository:
 
     _INSERT = """
         INSERT INTO user_agent_recommendations
-            (created_at, agent, symbol, opcja, stop_loss, stop_profit, target_date, outcome)
+            (created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING id, created_at, agent, symbol, opcja, stop_loss, stop_profit, target_date, outcome
+        RETURNING id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
     """
     _SELECT_ALL = """
-        SELECT id, created_at, agent, symbol, opcja, stop_loss, stop_profit, target_date, outcome
+        SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
         FROM user_agent_recommendations
         ORDER BY created_at DESC
     """
@@ -26,6 +26,11 @@ class UserAgentRecommendationRepository:
     _SELECT_BY_AGENT = _SELECT_ALL.replace(
         "ORDER BY", "WHERE agent = ? ORDER BY"
     )
+    _SELECT_LATEST_BY_SYMBOL = """
+        SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
+        FROM user_agent_recommendations
+        WHERE symbol = ? ORDER BY created_at DESC LIMIT 1
+    """
     _SET_OUTCOME = "UPDATE user_agent_recommendations SET outcome = ? WHERE id = ?"
 
     def _row_to_model(self, row: sqlite3.Row) -> UserAgentRecommendation:
@@ -34,7 +39,7 @@ class UserAgentRecommendationRepository:
             created_at=datetime.fromisoformat(row["created_at"]),
             agent=row["agent"],
             symbol=row["symbol"],
-            opcja=row["opcja"],
+            option=row["option"],
             stop_loss=row["stop_loss"],
             stop_profit=row["stop_profit"],
             target_date=date.fromisoformat(row["target_date"]) if row["target_date"] else None,
@@ -45,7 +50,7 @@ class UserAgentRecommendationRepository:
         self,
         agent: str,
         symbol: str,
-        opcja: str,
+        option: str,
         stop_loss: float | None = None,
         stop_profit: float | None = None,
         target_date: date | None = None,
@@ -55,7 +60,7 @@ class UserAgentRecommendationRepository:
         target_str = target_date.isoformat() if target_date else None
         outcome_str = outcome.value if outcome else None
         with self.connection_factory() as conn:
-            cur = conn.execute(self._INSERT, (now, agent, symbol, opcja, stop_loss, stop_profit, target_str, outcome_str))
+            cur = conn.execute(self._INSERT, (now, agent, symbol, option, stop_loss, stop_profit, target_str, outcome_str))
             row = cur.fetchone()
         return self._row_to_model(row)
 
@@ -63,6 +68,11 @@ class UserAgentRecommendationRepository:
         with self.connection_factory() as conn:
             rows = conn.execute(self._SELECT_ALL).fetchall()
         return [self._row_to_model(r) for r in rows]
+
+    def get_latest_by_symbol(self, symbol: str) -> UserAgentRecommendation | None:
+        with self.connection_factory() as conn:
+            row = conn.execute(self._SELECT_LATEST_BY_SYMBOL, (symbol,)).fetchone()
+        return self._row_to_model(row) if row else None
 
     def list_by_symbol(self, symbol: str) -> list[UserAgentRecommendation]:
         with self.connection_factory() as conn:

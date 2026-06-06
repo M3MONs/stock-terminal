@@ -15,7 +15,7 @@ class UserAgentRecommendation(BaseModel):
     created_at: datetime
     agent: str
     symbol: str
-    opcja: str
+    option: str
     stop_loss: float | None = None
     stop_profit: float | None = None
     target_date: date | None = None
