@@ -1,5 +1,6 @@
 CARDS_GRID_ID = "stock-cards"
 WORKER_PREFIX = "meta_"
+SIGNAL_WORKER_PREFIX = "signal_"
 
 CARD_CLASS = "stock-card"
 CLASS_SYMBOL = "card-symbol"
@@ -7,6 +8,14 @@ CLASS_PRICE = "card-price"
 CLASS_CHANGE_UP = "card-change-up"
 CLASS_CHANGE_DOWN = "card-change-down"
 CLASS_LOADING = "card-loading"
+CLASS_SIGNAL_BUY = "card-signal-buy"
+CLASS_SIGNAL_SELL = "card-signal-sell"
+CLASS_SIGNAL_HOLD = "card-signal-hold"
+CLASS_SIGNAL_NEUTRAL = "card-signal-neutral"
 
 PRICE_ID_PREFIX = "price-"
 CHANGE_ID_PREFIX = "change-"
+SIGNAL_ID_PREFIX = "signal-"
+SLTP_ID_PREFIX = "sltp-"
+
+CLASS_SLTP = "card-sltp"

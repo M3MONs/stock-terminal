@@ -1,15 +1,23 @@
+import time
+from datetime import datetime, timezone
+
 from textual.app import ComposeResult
 from textual.containers import Grid
 from textual.events import Click, Key
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Label, Static
+from textual.containers import Horizontal
+from textual.widgets import Button, Label, Static
 from textual.worker import Worker, WorkerState
 
 from config import config as app_config
+from connectors.base import ConnectorError
 from data import create_service
+from models.app_config import AppConfig
 from models.stock_meta import StockMeta
-from repositories import symbol_repo
+from models.user_agent_recommendation import UserAgentRecommendation
+from repositories import recommendation_repo, symbol_repo
+from services import signal_service
 from .constants import (
     CARDS_GRID_ID,
     CARD_CLASS,
@@ -18,11 +26,36 @@ from .constants import (
     CLASS_CHANGE_UP,
     CLASS_CHANGE_DOWN,
     CLASS_LOADING,
+    CLASS_SIGNAL_BUY,
+    CLASS_SIGNAL_SELL,
+    CLASS_SIGNAL_HOLD,
+    CLASS_SIGNAL_NEUTRAL,
     PRICE_ID_PREFIX,
     CHANGE_ID_PREFIX,
+    SIGNAL_ID_PREFIX,
+    SLTP_ID_PREFIX,
+    CLASS_SLTP,
     WORKER_PREFIX,
+    SIGNAL_WORKER_PREFIX,
 )
 from .styles import CSS
+
+
+def _fetch_signal(symbol: str, cfg: AppConfig, delay: float = 0.0) -> UserAgentRecommendation | None:
+    cached = recommendation_repo.get_latest_by_symbol(symbol)
+    if cached is not None:
+        created = cached.created_at.replace(tzinfo=timezone.utc) if cached.created_at.tzinfo is None else cached.created_at
+        age_minutes = (datetime.now(timezone.utc) - created).total_seconds() / 60
+        if age_minutes < cfg.signal_interval:
+            return cached
+    if not cfg.connector:
+        return cached
+    if delay > 0:
+        time.sleep(delay)
+    try:
+        return signal_service.generate(symbol, cfg)
+    except (ConnectorError, Exception):
+        return cached
 
 
 class StockCard(Widget):
@@ -30,6 +63,11 @@ class StockCard(Widget):
     can_focus = True
 
     class Selected(Message):
+        def __init__(self, symbol: str) -> None:
+            super().__init__()
+            self.symbol = symbol
+
+    class SignalRefreshRequested(Message):
         def __init__(self, symbol: str) -> None:
             super().__init__()
             self.symbol = symbol
@@ -45,11 +83,17 @@ class StockCard(Widget):
     def on_key(self, event: Key) -> None:
         if event.key == "enter":
             self.post_message(self.Selected(self._symbol))
+        elif event.key == "r":
+            self.post_message(self.SignalRefreshRequested(self._symbol))
 
     def compose(self) -> ComposeResult:
         yield Label(self._symbol, classes=CLASS_SYMBOL)
         yield Label("loading…", classes=CLASS_LOADING, id=f"{PRICE_ID_PREFIX}{self._safe_id}")
         yield Label("", id=f"{CHANGE_ID_PREFIX}{self._safe_id}")
+        with Horizontal(classes="signal-row"):
+            yield Label("", id=f"{SIGNAL_ID_PREFIX}{self._safe_id}", classes=CLASS_SIGNAL_NEUTRAL)
+            yield Button("⟳", id=f"refresh-{self._safe_id}", classes="refresh-btn")
+        yield Label("", id=f"{SLTP_ID_PREFIX}{self._safe_id}", classes=CLASS_SLTP)
 
     def update(self, meta: StockMeta) -> None:
         price_label = self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label)
@@ -69,8 +113,61 @@ class StockCard(Widget):
             change_label.add_class(cls)
             change_label.update(f"{arrow} {abs(meta.change_pct):.2f}%")
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        self.post_message(self.SignalRefreshRequested(self._symbol))
+
     def set_error(self) -> None:
         self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label).update("error")
+
+    def set_signal_loading(self) -> None:
+        label = self.query_one(f"#{SIGNAL_ID_PREFIX}{self._safe_id}", Label)
+        label.remove_class(CLASS_SIGNAL_BUY, CLASS_SIGNAL_SELL, CLASS_SIGNAL_HOLD, CLASS_SIGNAL_NEUTRAL)
+        label.add_class(CLASS_SIGNAL_NEUTRAL)
+        label.update("⟳ refreshing…")
+        self.query_one(f"#{SLTP_ID_PREFIX}{self._safe_id}", Label).update("")
+        self.query_one(f"#refresh-{self._safe_id}", Button).disabled = True
+
+    def set_signal_error(self, msg: str = "⚠ error") -> None:
+        label = self.query_one(f"#{SIGNAL_ID_PREFIX}{self._safe_id}", Label)
+        label.remove_class(CLASS_SIGNAL_BUY, CLASS_SIGNAL_SELL, CLASS_SIGNAL_HOLD, CLASS_SIGNAL_NEUTRAL)
+        label.add_class(CLASS_SIGNAL_NEUTRAL)
+        label.update(msg)
+        self.query_one(f"#refresh-{self._safe_id}", Button).disabled = False
+
+    def update_signal(self, rec: UserAgentRecommendation | None) -> None:
+        label = self.query_one(f"#{SIGNAL_ID_PREFIX}{self._safe_id}", Label)
+        sltp_label = self.query_one(f"#{SLTP_ID_PREFIX}{self._safe_id}", Label)
+        label.remove_class(CLASS_SIGNAL_BUY, CLASS_SIGNAL_SELL, CLASS_SIGNAL_HOLD, CLASS_SIGNAL_NEUTRAL)
+        if rec is None:
+            label.add_class(CLASS_SIGNAL_NEUTRAL)
+            label.update("")
+            sltp_label.update("")
+            return
+        now = datetime.now(timezone.utc)
+        created = rec.created_at.replace(tzinfo=timezone.utc) if rec.created_at.tzinfo is None else rec.created_at
+        age_seconds = int((now - created).total_seconds())
+        if age_seconds < 3600:
+            age_str = f"{age_seconds // 60}m ago"
+        elif age_seconds < 86400:
+            age_str = f"{age_seconds // 3600}h ago"
+        else:
+            age_str = f"{age_seconds // 86400}d ago"
+        option = rec.option.upper()
+        if option == "BUY":
+            label.add_class(CLASS_SIGNAL_BUY)
+        elif option == "SELL":
+            label.add_class(CLASS_SIGNAL_SELL)
+        else:
+            label.add_class(CLASS_SIGNAL_HOLD)
+        label.update(f"▶ {option}  {age_str}")
+        parts = []
+        if rec.stop_loss is not None:
+            parts.append(f"SL {rec.stop_loss:.2f}")
+        if rec.stop_profit is not None:
+            parts.append(f"TP {rec.stop_profit:.2f}")
+        sltp_label.update("  ".join(parts))
+        self.query_one(f"#refresh-{self._safe_id}", Button).disabled = False
 
 
 class StockGridWidget(Widget):
@@ -100,11 +197,46 @@ class StockGridWidget(Widget):
                 exclusive=False,
                 exit_on_error=False,
             )
+        for i, symbol in enumerate(symbols):
+            self.run_worker(
+                lambda s=symbol, c=cfg, d=i * 5.0: _fetch_signal(s, c, d),
+                thread=True,
+                name=f"{SIGNAL_WORKER_PREFIX}{symbol}",
+                exclusive=False,
+                exit_on_error=False,
+            )
+
+    def on_stock_card_signal_refresh_requested(self, event: StockCard.SignalRefreshRequested) -> None:
+        cards = self.query(StockCard)
+        card = next((c for c in cards if c._symbol == event.symbol), None)
+        if card is not None:
+            card.set_signal_loading()
+        cfg = app_config.load()
+        self.run_worker(
+            lambda s=event.symbol, c=cfg: signal_service.generate(s, c),
+            thread=True,
+            name=f"{SIGNAL_WORKER_PREFIX}{event.symbol}",
+            exclusive=False,
+            exit_on_error=False,
+        )
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
-        if not event.worker.name.startswith(WORKER_PREFIX):
+        name = event.worker.name
+        if name.startswith(SIGNAL_WORKER_PREFIX):
+            symbol = name[len(SIGNAL_WORKER_PREFIX):]
+            cards = self.query(StockCard)
+            card = next((c for c in cards if c._symbol == symbol), None)
+            if card is None:
+                return
+            if event.worker.state == WorkerState.SUCCESS:
+                card.update_signal(event.worker.result)
+            elif event.worker.state == WorkerState.ERROR:
+                err = str(event.worker.error) if event.worker.error else "error"
+                card.set_signal_error(f"⚠ {err[:20]}")
             return
-        symbol = event.worker.name[len(WORKER_PREFIX):]
+        if not name.startswith(WORKER_PREFIX):
+            return
+        symbol = name[len(WORKER_PREFIX):]
         cards = self.query(StockCard)
         card = next((c for c in cards if c._symbol == symbol), None)
         if card is None:
