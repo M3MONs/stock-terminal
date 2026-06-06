@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Callable
 
 from models.user_agent_recommendation import Outcome, UserAgentRecommendation
@@ -56,7 +56,7 @@ class UserAgentRecommendationRepository:
         target_date: date | None = None,
         outcome: Outcome | None = None,
     ) -> UserAgentRecommendation:
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc)
         target_str = target_date.isoformat() if target_date else None
         outcome_str = outcome.value if outcome else None
         with self.connection_factory() as conn:
