@@ -28,7 +28,7 @@ def test_recommendation_optional_fields():
         created_at=datetime(2024, 6, 1, 10, 0),
         agent="agent1",
         symbol="AAPL",
-        opcja="BUY",
+        option="BUY",
     )
     assert r.outcome is None
     assert r.stop_loss is None
@@ -40,7 +40,7 @@ def test_recommendation_with_all_fields():
         created_at=datetime(2024, 6, 1, 10, 0),
         agent="agent1",
         symbol="AAPL",
-        opcja="BUY",
+        option="BUY",
         stop_loss=150.0,
         stop_profit=200.0,
         target_date=date(2024, 12, 31),
@@ -56,6 +56,6 @@ def test_invalid_outcome_raises():
             created_at=datetime(2024, 6, 1),
             agent="a",
             symbol="X",
-            opcja="BUY",
+            option="BUY",
             outcome="invalid_value",  # type: ignore
         )
