@@ -5,14 +5,10 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView
 from textual.worker import Worker, WorkerState
 
 from config import config as app_config
-from connectors.registry import get_connector, list_connectors
+from connectors.registry import get_connector, get_connector_key_field, list_connectors
 from security.keystore import get_secret, set_secret
 from .constants import BINDINGS
 from .styles import CSS
-
-_KEY_FIELDS: dict[str, str] = {
-    "gemini": "gemini_api_key",
-}
 
 
 class ConnectorPickerScreen(ModalScreen[None]):
@@ -49,7 +45,7 @@ class ConnectorPickerScreen(ModalScreen[None]):
         return items
 
     def _current_key(self) -> str:
-        field = _KEY_FIELDS.get(self._cfg.connector, "")
+        field = get_connector_key_field(self._cfg.connector)
         return get_secret(field) if field else ""
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
@@ -63,7 +59,7 @@ class ConnectorPickerScreen(ModalScreen[None]):
 
     def action_save(self) -> None:
         key_input = self.query_one("#api-key-input", Input)
-        field = _KEY_FIELDS.get(self._cfg.connector)
+        field = get_connector_key_field(self._cfg.connector)
         if field:
             set_secret(field, key_input.value.strip())
         cfg = app_config.load().model_copy(update={"connector": self._cfg.connector})
