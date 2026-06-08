@@ -1,9 +1,10 @@
 import pytest
 from datetime import datetime, date
+from decimal import Decimal
 from pydantic import ValidationError
 
 from models.user_agent import UserAgent
-from models.user_agent_recommendation import Outcome, UserAgentRecommendation
+from models.user_agent_recommendation import Outcome, TradingOption, UserAgentRecommendation
 
 
 def test_user_agent_defaults():
@@ -28,7 +29,7 @@ def test_recommendation_optional_fields():
         created_at=datetime(2024, 6, 1, 10, 0),
         agent="agent1",
         symbol="AAPL",
-        option="BUY",
+        option=TradingOption.BUY,
     )
     assert r.outcome is None
     assert r.stop_loss is None
@@ -40,14 +41,14 @@ def test_recommendation_with_all_fields():
         created_at=datetime(2024, 6, 1, 10, 0),
         agent="agent1",
         symbol="AAPL",
-        option="BUY",
-        stop_loss=150.0,
-        stop_profit=200.0,
+        option=TradingOption.BUY,
+        stop_loss=Decimal("150.0"),
+        stop_profit=Decimal("200.0"),
         target_date=date(2024, 12, 31),
         outcome=Outcome.SUCCESS,
     )
     assert r.outcome == Outcome.SUCCESS
-    assert r.stop_loss == 150.0
+    assert r.stop_loss == Decimal("150.0")
 
 
 def test_invalid_outcome_raises():
@@ -56,6 +57,22 @@ def test_invalid_outcome_raises():
             created_at=datetime(2024, 6, 1),
             agent="a",
             symbol="X",
-            option="BUY",
+            option=TradingOption.BUY,
             outcome="invalid_value",  # type: ignore
         )
+
+
+def test_invalid_option_raises():
+    with pytest.raises(ValidationError):
+        UserAgentRecommendation(
+            created_at=datetime(2024, 6, 1),
+            agent="a",
+            symbol="X",
+            option="LONG",  # type: ignore
+        )
+
+
+def test_trading_option_enum_values():
+    assert TradingOption.BUY == "BUY"
+    assert TradingOption.SELL == "SELL"
+    assert TradingOption.HOLD == "HOLD"
