@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from types import ModuleType
 from typing import TypeVar, cast
 
+from google.genai.client import Client
 from pydantic import BaseModel
 
 from connectors.base import BaseAgentConnector, ConnectorError
@@ -22,17 +24,19 @@ class GeminiConnector(BaseAgentConnector):
         super().__init__(model_name, temperature, **kwargs)
         self._api_key = api_key
 
-    def ping(self) -> None:
+    def _get_client(self) -> tuple[Client, ModuleType]:
         try:
             from google import genai
+            from google.genai import types
         except ImportError as e:
             raise ConnectorError("google-genai not installed") from e
-        
         if not self._api_key:
             raise ConnectorError("Gemini API key not configured")
-        
+        return genai.Client(api_key=self._api_key), types
+
+    def ping(self) -> None:
+        client, _ = self._get_client()
         try:
-            client = genai.Client(api_key=self._api_key)
             next(iter(client.models.list()))
         except ConnectorError:
             raise
@@ -40,17 +44,8 @@ class GeminiConnector(BaseAgentConnector):
             raise ConnectorError(str(e)) from e
 
     def generate_structured(self, prompt: str, response_model: type[T], **kwargs) -> T:
+        client, types = self._get_client()
         try:
-            from google import genai
-            from google.genai import types
-        except ImportError as e:
-            raise ConnectorError("google-genai not installed") from e
-
-        if not self._api_key:
-            raise ConnectorError("Gemini API key not configured")
-
-        try:
-            client = genai.Client(api_key=self._api_key)
             config = types.GenerateContentConfig(
                 temperature=self.temperature,
                 response_mime_type="application/json",
