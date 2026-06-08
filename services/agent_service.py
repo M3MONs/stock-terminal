@@ -25,4 +25,4 @@ class AgentService:
         self._repository.set_enabled(agent_id, enabled)
 
     def update_content(self, file_path: str, text: str) -> None:
-        Path(file_path).write_text(text)
+        Path(file_path).write_text(text, encoding="utf-8")
