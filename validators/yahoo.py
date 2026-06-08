@@ -1,26 +1,16 @@
-import re
-
 import yfinance as yf
 
-from validators.base import SymbolValidator
-
-_YAHOO_SYMBOL_RE = re.compile(r"^[A-Z0-9.\-]{1,15}$")
+from validators.default import DefaultSymbolValidator
 
 
-class YahooSymbolValidator(SymbolValidator):
+class YahooSymbolValidator(DefaultSymbolValidator):
     def validate(self, symbol: str) -> str | None:
         symbol = symbol.strip().upper()
-        if not symbol:
-            return "Symbol cannot be empty"
-        
-        if not _YAHOO_SYMBOL_RE.match(symbol):
-            return "Symbol must be 1-15 chars: letters, digits, dot, or hyphen"
-        
-        if self._symbol_exists(symbol):
-            return None
+        err = super().validate(symbol)
+        if err:
+            return err
+        return None if self._symbol_exists(symbol) else f"Symbol not found on Yahoo Finance: {symbol}"
 
-        return f"Symbol not found on Yahoo Finance: {symbol}"
-    
     def _symbol_exists(self, symbol: str) -> bool:
         try:
             ticker = yf.Ticker(symbol)
