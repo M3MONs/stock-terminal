@@ -2,6 +2,7 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
 from config import config as app_config
+from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
 from ui.components.confirm_modal import ConfirmModal
 from ui.components.stock_grid import StockGridWidget
 from ui.components.stock_grid.widget import StockCard
@@ -33,6 +34,17 @@ class Dashboard(App):
         self._refresh_subtitle()
         self.query_one(StockGridWidget).load()
         self.call_after_refresh(self._restore_grid_focus)
+        self._run_evaluation()
+        self.set_interval(15 * 60, self._run_evaluation)
+
+    def _run_evaluation(self) -> None:
+        self.run_worker(
+            _eval_pending,
+            thread=True,
+            name="eval-pending",
+            exclusive=True,
+            exit_on_error=False,
+        )
 
     def _restore_grid_focus(self) -> None:
         grid = self.query_one(StockGridWidget)
