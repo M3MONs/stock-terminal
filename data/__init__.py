@@ -9,8 +9,14 @@ from models.stock_meta import StockMeta
 from models.timeframe import Timeframe
 from data.registry import get_source
 
+_discovered = False
 
-def _autodiscover() -> None:
+
+def autodiscover() -> None:
+    global _discovered
+    if _discovered:
+        return
+    _discovered = True
     import data
     import data.adapters
 
@@ -22,7 +28,7 @@ def _autodiscover() -> None:
             importlib.import_module(f"data.adapters.{name}")
 
 
-_autodiscover()
+autodiscover()
 
 
 class StockDataService:
