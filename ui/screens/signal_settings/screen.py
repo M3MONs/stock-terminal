@@ -163,14 +163,7 @@ class SignalSettingsScreen(ModalScreen[None]):
             return self._cfg.signal_interval
 
     def _save_cfg_signal(self, interval: int) -> None:
-        cfg = app_config.load().model_copy(
-            update={
-                "signal_interval": interval,
-                "signal_timeframe_fast": self._cfg.signal_timeframe_fast,
-                "signal_timeframe_slow": self._cfg.signal_timeframe_slow,
-                "signal_agent": self._cfg.signal_agent,
-            }
-        )
+        cfg = self._cfg.model_copy(update={"signal_interval": interval})
         app_config.save(cfg)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
