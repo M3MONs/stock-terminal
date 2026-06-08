@@ -99,3 +99,12 @@ class RecommendationEvaluationService:
             for rec in self._repo.list_pending()
             if (outcome := self.evaluate_and_save(rec)) is not None
         ]
+
+
+def evaluate_all_pending() -> list[tuple[UserAgentRecommendation, Outcome]]:
+    from config import config as app_config
+    from data import create_service
+    from repositories import recommendation_repo
+    cfg = app_config.load()
+    data_service = create_service(cfg.provider or "mock")
+    return RecommendationEvaluationService(recommendation_repo, data_service).evaluate_all_pending()
