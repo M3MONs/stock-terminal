@@ -1,7 +1,14 @@
 from datetime import date, datetime
+from decimal import Decimal
 from enum import StrEnum
 
 from pydantic import BaseModel
+
+
+class TradingOption(StrEnum):
+    BUY = "BUY"
+    SELL = "SELL"
+    HOLD = "HOLD"
 
 
 class Outcome(StrEnum):
@@ -15,8 +22,8 @@ class UserAgentRecommendation(BaseModel):
     created_at: datetime
     agent: str
     symbol: str
-    option: str
-    stop_loss: float | None = None
-    stop_profit: float | None = None
+    option: TradingOption
+    stop_loss: Decimal | None = None
+    stop_profit: Decimal | None = None
     target_date: date | None = None
     outcome: Outcome | None = None
