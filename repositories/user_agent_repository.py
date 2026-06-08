@@ -16,13 +16,13 @@ class UserAgentRepository:
     def get_all(self) -> list[UserAgent]:
         with self.connection_factory() as conn:
             rows = conn.execute(self._SELECT_ALL_QUERY).fetchall()
-        return [UserAgent(id=r["id"], name=r["name"], file_path=r["file_path"], enabled=bool(r["enabled"])) for r in rows]
+        return [UserAgent.model_validate(dict(r)) for r in rows]
 
     def add(self, name: str, file_path: str) -> UserAgent:
         with self.connection_factory() as conn:
             cur = conn.execute(self._ADD_QUERY, (name, file_path))
             row = cur.fetchone()
-        return UserAgent(id=row["id"], name=row["name"], file_path=row["file_path"], enabled=bool(row["enabled"]))
+        return UserAgent.model_validate(dict(row))
 
     def remove(self, agent_id: int) -> None:
         with self.connection_factory() as conn:
