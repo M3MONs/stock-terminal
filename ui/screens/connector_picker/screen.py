@@ -59,12 +59,18 @@ class ConnectorPickerScreen(ModalScreen[None]):
 
     def action_save(self) -> None:
         key_input = self.query_one("#api-key-input", Input)
+        status = self.query_one("#status", Label)
         field = get_connector_key_field(self._cfg.connector)
+        key = key_input.value.strip()
         if field:
-            set_secret(field, key_input.value.strip())
+            set_secret(field, key)
         cfg = app_config.load().model_copy(update={"connector": self._cfg.connector})
         app_config.save(cfg)
-        self.dismiss(None)
+        if field and not key:
+            status.remove_class("ok")
+            status.update(f"Saved. Warning: no API key set for {self._cfg.connector}")
+        else:
+            self.dismiss(None)
 
     def action_test_connection(self) -> None:
         key = self.query_one("#api-key-input", Input).value.strip()
