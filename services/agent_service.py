@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-from db import AGENTS_DIR
+from config.paths import AGENTS_DIR
 from models.user_agent import UserAgent
 from repositories.user_agent_repository import UserAgentRepository
 
