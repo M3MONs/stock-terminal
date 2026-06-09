@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 from db import AGENTS_DIR
@@ -16,7 +17,10 @@ class AgentService:
         file_path = AGENTS_DIR / f"{name}.md"
         if not file_path.exists():
             file_path.write_text(f"# {name}\n\n")
-        return self._repository.add(name, str(file_path))
+        try:
+            return self._repository.add(name, str(file_path))
+        except sqlite3.IntegrityError:
+            raise ValueError(f"Agent '{name}' already exists")
 
     def remove(self, agent_id: int) -> None:
         self._repository.remove(agent_id)
