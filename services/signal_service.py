@@ -102,7 +102,7 @@ class SignalService:
 
         _log.info("signal: %s → %s sl=%s tp=%s", symbol, response.option, response.stop_loss, response.stop_profit)
         return self._recommendation_repo.add(
-            agent=cfg.connector,
+            agent=cfg.signal_agent,
             symbol=symbol,
             option=response.option,
             stop_loss=response.stop_loss,
