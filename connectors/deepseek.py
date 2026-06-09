@@ -5,7 +5,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from connectors.base import BaseAgentConnector, ConnectorError
+from connectors.base import BaseAgentConnector, ConnectorAuthError, ConnectorError
 from connectors.registry import register_connector
 
 T = TypeVar("T", bound=BaseModel)
@@ -32,7 +32,7 @@ class DeepSeekConnector(BaseAgentConnector):
         except ImportError as e:
             raise ConnectorError("openai not installed") from e
         if not self._api_key:
-            raise ConnectorError("DeepSeek API key not configured")
+            raise ConnectorAuthError("DeepSeek API key not configured")
         return OpenAI(api_key=self._api_key, base_url=_BASE_URL)
 
     def ping(self) -> None:
