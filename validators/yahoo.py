@@ -1,6 +1,10 @@
+import logging
+
 import yfinance as yf
 
 from validators.default import DefaultSymbolValidator
+
+_log = logging.getLogger(__name__)
 
 
 class YahooSymbolValidator(DefaultSymbolValidator):
@@ -24,5 +28,6 @@ class YahooSymbolValidator(DefaultSymbolValidator):
                 for field in ("symbol", "longName", "shortName")
             )
 
-        except Exception:
+        except Exception as e:
+            _log.warning("yfinance lookup failed for %s: %s", symbol, e)
             return False
