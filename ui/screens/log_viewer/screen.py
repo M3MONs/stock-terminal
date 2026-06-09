@@ -7,7 +7,7 @@ from textual.containers import ScrollableContainer, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Label, Static
 
-from db import LOG_PATH
+from config.paths import LOG_PATH
 from .constants import BINDINGS, MAX_LINES
 from .styles import CSS
 
