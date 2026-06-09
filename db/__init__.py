@@ -9,6 +9,7 @@ _DB_MIGRATION_DIR_NAME = "migrations"
 _DB_PATH = Path.home() / _DB_DIR_NAME / _DB_NAME
 _MIGRATIONS_PATH = Path(__file__).parent.parent / _DB_MIGRATION_DIR_NAME
 AGENTS_DIR = Path.home() / _DB_DIR_NAME / "agents"
+LOG_PATH = Path.home() / _DB_DIR_NAME / "app.log"
 
 
 def get_connection() -> sqlite3.Connection:
