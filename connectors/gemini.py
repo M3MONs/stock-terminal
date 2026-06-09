@@ -6,7 +6,7 @@ from typing import TypeVar, cast
 from google.genai.client import Client
 from pydantic import BaseModel
 
-from connectors.base import BaseAgentConnector, ConnectorError
+from connectors.base import BaseAgentConnector, ConnectorAuthError, ConnectorError
 from connectors.registry import register_connector
 
 T = TypeVar("T", bound=BaseModel)
@@ -31,7 +31,7 @@ class GeminiConnector(BaseAgentConnector):
         except ImportError as e:
             raise ConnectorError("google-genai not installed") from e
         if not self._api_key:
-            raise ConnectorError("Gemini API key not configured")
+            raise ConnectorAuthError("Gemini API key not configured")
         return genai.Client(api_key=self._api_key), types
 
     def ping(self) -> None:
