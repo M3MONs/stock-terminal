@@ -152,15 +152,21 @@ class SignalSettingsScreen(ModalScreen[None]):
 
     def action_save(self) -> None:
         interval_input = self.query_one("#interval-input", Input)
-        interval = self._get_interval_from_input(interval_input)
+        try:
+            interval = self._parse_interval(interval_input.value)
+        except ValueError:
+            interval_input.add_class("error")
+            return
+        interval_input.remove_class("error")
         self._save_cfg_signal(interval)
         self.dismiss(None)
 
-    def _get_interval_from_input(self, interval_input: Input) -> int:
-        try:
-            return int(interval_input.value.strip())
-        except ValueError:
-            return self._cfg.signal_interval
+    @staticmethod
+    def _parse_interval(raw: str) -> int:
+        value = int(raw.strip())
+        if value <= 0:
+            raise ValueError(f"interval must be positive, got {value}")
+        return value
 
     def _save_cfg_signal(self, interval: int) -> None:
         cfg = self._cfg.model_copy(update={"signal_interval": interval})
