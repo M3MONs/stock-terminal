@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -11,7 +12,9 @@ from textual.widgets import Button, Label, Static
 from textual.worker import Worker, WorkerState
 
 from config import config as app_config
-from connectors.base import ConnectorError
+from connectors.base import ConnectorAuthError, ConnectorError, ConnectorNotConfiguredError
+from connectors.registry import get_connector_key_field
+from security.keystore import get_secret
 from data import create_service
 from models.app_config import AppConfig
 from models.stock_meta import StockMeta
@@ -40,6 +43,8 @@ from .constants import (
 )
 from .styles import CSS
 
+_log = logging.getLogger(__name__)
+
 
 def _fetch_signal(symbol: str, cfg: AppConfig, delay: float = 0.0) -> UserAgentRecommendation | None:
     cached = recommendation_repo.get_latest_by_symbol(symbol)
@@ -50,11 +55,18 @@ def _fetch_signal(symbol: str, cfg: AppConfig, delay: float = 0.0) -> UserAgentR
             return cached
     if not cfg.connector:
         return cached
+    key_field = get_connector_key_field(cfg.connector)
+    if key_field and not get_secret(key_field):
+        _log.warning("signal skipped for %s: no API key for connector '%s'", symbol, cfg.connector)
+        return cached
     if delay > 0:
         time.sleep(delay)
     try:
         return signal_service.generate(symbol, cfg)
-    except (ConnectorError, Exception):
+    except ConnectorAuthError:
+        _log.warning("signal failed for %s: auth error via '%s'", symbol, cfg.connector)
+        return cached
+    except ConnectorNotConfiguredError:
         return cached
 
 
@@ -209,9 +221,18 @@ class StockGridWidget(Widget):
     def on_stock_card_signal_refresh_requested(self, event: StockCard.SignalRefreshRequested) -> None:
         cards = self.query(StockCard)
         card = next((c for c in cards if c._symbol == event.symbol), None)
+        cfg = app_config.load()
+        if not cfg.connector:
+            if card is not None:
+                card.set_signal_error("⚠ no connector set")
+            return
+        key_field = get_connector_key_field(cfg.connector)
+        if key_field and not get_secret(key_field):
+            if card is not None:
+                card.set_signal_error(f"⚠ no API key for {cfg.connector}")
+            return
         if card is not None:
             card.set_signal_loading()
-        cfg = app_config.load()
         self.run_worker(
             lambda s=event.symbol, c=cfg: signal_service.generate(s, c),
             thread=True,
@@ -223,7 +244,7 @@ class StockGridWidget(Widget):
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         name = event.worker.name
         if name.startswith(SIGNAL_WORKER_PREFIX):
-            symbol = name[len(SIGNAL_WORKER_PREFIX):]
+            symbol = name[len(SIGNAL_WORKER_PREFIX) :]
             cards = self.query(StockCard)
             card = next((c for c in cards if c._symbol == symbol), None)
             if card is None:
@@ -231,12 +252,20 @@ class StockGridWidget(Widget):
             if event.worker.state == WorkerState.SUCCESS:
                 card.update_signal(event.worker.result)
             elif event.worker.state == WorkerState.ERROR:
-                err = str(event.worker.error) if event.worker.error else "error"
-                card.set_signal_error(f"⚠ {err[:20]}")
+                err = event.worker.error
+                if isinstance(err, ConnectorAuthError):
+                    msg = "⚠ API key not configured"
+                elif isinstance(err, ConnectorNotConfiguredError):
+                    msg = "⚠ no connector set"
+                elif isinstance(err, ConnectorError):
+                    msg = f"⚠ connector: {err}"
+                else:
+                    msg = f"⚠ {err}" if err else "⚠ error"
+                card.set_signal_error(msg)
             return
         if not name.startswith(WORKER_PREFIX):
             return
-        symbol = name[len(WORKER_PREFIX):]
+        symbol = name[len(WORKER_PREFIX) :]
         cards = self.query(StockCard)
         card = next((c for c in cards if c._symbol == symbol), None)
         if card is None:
