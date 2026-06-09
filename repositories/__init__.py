@@ -1,9 +1,11 @@
 from db import get_connection
+from .config_repository import ConfigRepository
 from .symbol_repository import SymbolRepository
 from .user_agent_recommendation_repository import UserAgentRecommendationRepository
 from .user_agent_repository import UserAgentRepository
 
 
+config_repo = ConfigRepository(connection_factory=get_connection)
 symbol_repo = SymbolRepository(connection_factory=get_connection)
 user_agent_repo = UserAgentRepository(connection_factory=get_connection)
 recommendation_repo = UserAgentRecommendationRepository(connection_factory=get_connection)
