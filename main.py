@@ -1,7 +1,8 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from db import LOG_PATH, init_db
+from config.paths import LOG_PATH
+from db import init_db
 from ui.dashboard import Dashboard
 
 _handler = RotatingFileHandler(LOG_PATH, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
