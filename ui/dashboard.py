@@ -1,8 +1,8 @@
 import logging
+import threading
 
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
-from textual.worker import Worker, WorkerState
 
 from config import config as app_config
 from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
@@ -34,6 +34,8 @@ class Dashboard(App):
         ("l", "push_log_viewer", "Logs"),
     ]
 
+    _eval_thread: threading.Thread | None = None
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield StockGridWidget(id="stock-grid")
@@ -47,13 +49,21 @@ class Dashboard(App):
         self.set_interval(15 * 60, self._run_evaluation)
 
     def _run_evaluation(self) -> None:
-        self.run_worker(
-            _eval_pending,
-            thread=True,
+        if self._eval_thread is not None and self._eval_thread.is_alive():
+            return
+        thread = threading.Thread(
+            target=self._do_evaluation,
             name="eval-pending",
-            exclusive=True,
-            exit_on_error=False,
+            daemon=True,
         )
+        self._eval_thread = thread
+        thread.start()
+
+    def _do_evaluation(self) -> None:
+        try:
+            _eval_pending()
+        except Exception:
+            _log.exception("background evaluation failed")
 
     def _restore_grid_focus(self) -> None:
         grid = self.query_one(StockGridWidget)
@@ -106,10 +116,6 @@ class Dashboard(App):
 
     def action_signal_settings(self) -> None:
         self.push_screen(SignalSettingsScreen())
-
-    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
-        if event.worker.name == "eval-pending" and event.worker.state == WorkerState.ERROR:
-            _log.error("background evaluation failed: %s", event.worker.error)
 
     def action_push_history(self) -> None:
         self.push_screen(RecommendationHistoryScreen())
