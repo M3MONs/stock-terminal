@@ -18,7 +18,7 @@ _log = logging.getLogger(__name__)
 class DeepSeekConnector(BaseAgentConnector):
     def __init__(
         self,
-        model_name: str = "deepseek-chat",
+        model_name: str = "deepseek-v4-pro",
         temperature: float = 0.0,
         api_key: str = "",
         **kwargs,
