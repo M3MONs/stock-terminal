@@ -3,13 +3,10 @@ from pathlib import Path
 
 from yoyo import get_backend, read_migrations
 
-_DB_NAME = "stock.db"
-_DB_DIR_NAME = ".stock-terminal"
-_DB_MIGRATION_DIR_NAME = "migrations"
-_DB_PATH = Path.home() / _DB_DIR_NAME / _DB_NAME
-_MIGRATIONS_PATH = Path(__file__).parent.parent / _DB_MIGRATION_DIR_NAME
-AGENTS_DIR = Path.home() / _DB_DIR_NAME / "agents"
-LOG_PATH = Path.home() / _DB_DIR_NAME / "app.log"
+from config.paths import AGENTS_DIR, APP_DIR
+
+_DB_PATH = APP_DIR / "stock.db"
+_MIGRATIONS_PATH = Path(__file__).parent.parent / "migrations"
 
 
 def get_connection() -> sqlite3.Connection:
