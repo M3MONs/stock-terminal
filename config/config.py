@@ -1,25 +1,27 @@
-import sqlite3
-from typing import Callable
+import logging
+
+from pydantic import ValidationError
+
 from models.app_config import AppConfig
+from repositories.config_repository import ConfigRepository
+
+_log = logging.getLogger(__name__)
 
 
 class Config:
-    def __init__(self, connection_factory: Callable[[], sqlite3.Connection]) -> None:
-        self.connection_factory = connection_factory
-
-    _SELECT_QUERY = "SELECT key, value FROM app_config"
-    _INSERT_QUERY = "INSERT INTO app_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    def __init__(self, repo: ConfigRepository) -> None:
+        self.repo = repo
 
     def load(self) -> AppConfig:
-        with self.connection_factory() as conn:
-            rows = conn.execute(self._SELECT_QUERY).fetchall()
-        data = {r["key"]: r["value"] for r in rows}
-        return AppConfig.model_validate(data) if data else AppConfig()
+        data = self.repo.get_all()
+        if not data:
+            return AppConfig()
+        try:
+            return AppConfig.model_validate(data)
+        except ValidationError:
+            _log.error("corrupt app_config in DB, falling back to defaults")
+            return AppConfig()
 
     def save(self, config: AppConfig) -> None:
-        items = config.model_dump()
-        with self.connection_factory() as conn:
-            conn.executemany(
-                self._INSERT_QUERY,
-                [(k, str(v)) for k, v in items.items()],
-            )
+        items = {k: str(v) for k, v in config.model_dump().items()}
+        self.repo.save_all(items)

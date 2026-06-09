@@ -1,5 +1,5 @@
 from config.config import Config
-from db import get_connection
+from repositories import config_repo
 
 
-config = Config(get_connection)
+config = Config(config_repo)
