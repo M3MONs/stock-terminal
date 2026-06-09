@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import requests
 import yfinance as yf
 
 from data.base import DataSource, SourceError
@@ -19,15 +20,26 @@ _INTERVAL_MAP: dict[Timeframe, str] = {
 }
 
 _INTRADAY = {Timeframe.M5, Timeframe.M15, Timeframe.M30, Timeframe.H1, Timeframe.H4}
+_TIMEOUT: tuple[float, float] = (3.05, 15.0)
+
+
+class _TimeoutSession(requests.Session):
+    def request(self, *args: Any, **kwargs: Any):
+        kwargs.setdefault("timeout", _TIMEOUT)
+        return super().request(*args, **kwargs)
 
 
 @register_source("yahoo")
 class YahooSource(DataSource):
+    def __init__(self) -> None:
+        super().__init__()
+        self._session = _TimeoutSession()
+
     def fetch_ohlcv(self, symbol: str, timeframe: Timeframe, limit: int = 100) -> dict[str, Any]:
         interval = _INTERVAL_MAP[timeframe]
         period = "60d" if timeframe in _INTRADAY else "max"
         try:
-            df = yf.Ticker(symbol).history(period=period, interval=interval)
+            df = yf.Ticker(symbol, session=self._session).history(period=period, interval=interval, timeout=_TIMEOUT[1])
         except Exception as e:
             raise SourceError(str(e)) from e
         if df.empty:
@@ -37,7 +49,7 @@ class YahooSource(DataSource):
 
     def fetch_meta(self, symbol: str) -> dict[str, Any]:
         try:
-            info = yf.Ticker(symbol).info
+            info = yf.Ticker(symbol, session=self._session).info
         except Exception as e:
             raise SourceError(str(e)) from e
         if not info.get("symbol") and not info.get("regularMarketPrice") and not info.get("currentPrice"):
