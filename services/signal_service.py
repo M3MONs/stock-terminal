@@ -71,6 +71,7 @@ class SignalService:
         try:
             return Path(agent.file_path).read_text(encoding="utf-8")
         except OSError:
+            _log.warning("agent file missing or unreadable: %s", agent.file_path)
             return ""
 
     def generate(self, symbol: str, cfg: AppConfig) -> UserAgentRecommendation:
