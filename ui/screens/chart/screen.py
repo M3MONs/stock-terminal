@@ -61,7 +61,9 @@ class ChartScreen(Screen):
                     f"{self._symbol} · {self._timeframe}"
                 )
         elif event.worker.state == WorkerState.ERROR:
-            self.query_one(f"#{STATUS_ID}", Label).update(f"Error loading {self._symbol}")
+            err = event.worker.error
+            detail = f": {err}" if err else ""
+            self.query_one(f"#{STATUS_ID}", Label).update(f"Error loading {self._symbol}{detail}")
 
     def action_pop_screen(self) -> None:
         self.app.pop_screen()
