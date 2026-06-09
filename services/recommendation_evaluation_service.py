@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 from decimal import Decimal
+from typing import Callable
 
 from data import StockDataService
 from models.candle import Candle
@@ -93,18 +94,29 @@ class RecommendationEvaluationService:
             _log.warning("Skipping evaluation: %s", e)
             return None
 
-    def evaluate_all_pending(self) -> list[tuple[UserAgentRecommendation, Outcome]]:
-        return [
-            (rec, outcome)
-            for rec in self._repo.list_pending()
-            if (outcome := self.evaluate_and_save(rec)) is not None
-        ]
+    def evaluate_all_pending(
+        self,
+        should_cancel: Callable[[], bool] = lambda: False,
+    ) -> list[tuple[UserAgentRecommendation, Outcome]]:
+        results: list[tuple[UserAgentRecommendation, Outcome]] = []
+        for rec in self._repo.list_pending():
+            if should_cancel():
+                _log.info("evaluation cancelled after %d processed", len(results))
+                break
+            outcome = self.evaluate_and_save(rec)
+            if outcome is not None:
+                results.append((rec, outcome))
+        return results
 
 
-def evaluate_all_pending() -> list[tuple[UserAgentRecommendation, Outcome]]:
+def evaluate_all_pending(
+    should_cancel: Callable[[], bool] = lambda: False,
+) -> list[tuple[UserAgentRecommendation, Outcome]]:
     from config import config as app_config
     from data import create_service
     from repositories import recommendation_repo
     cfg = app_config.load()
     data_service = create_service(cfg.provider or "mock")
-    return RecommendationEvaluationService(recommendation_repo, data_service).evaluate_all_pending()
+    return RecommendationEvaluationService(recommendation_repo, data_service).evaluate_all_pending(
+        should_cancel=should_cancel
+    )
