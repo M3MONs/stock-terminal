@@ -16,7 +16,7 @@ T = TypeVar("T", bound=BaseModel)
 class GeminiConnector(BaseAgentConnector):
     def __init__(
         self,
-        model_name: str = "gemini-2.0-flash",
+        model_name: str = "gemini-3.5-flash",
         temperature: float = 0.0,
         api_key: str = "",
         **kwargs,
