@@ -1,5 +1,5 @@
 import logging
-import time
+import threading
 from datetime import datetime, timezone
 
 from textual.app import ComposeResult
@@ -44,6 +44,7 @@ from .constants import (
 from .styles import CSS
 
 _log = logging.getLogger(__name__)
+_shutdown_event = threading.Event()
 
 
 def _fetch_signal(symbol: str, cfg: AppConfig, delay: float = 0.0) -> UserAgentRecommendation | None:
@@ -60,7 +61,9 @@ def _fetch_signal(symbol: str, cfg: AppConfig, delay: float = 0.0) -> UserAgentR
         _log.warning("signal skipped for %s: no API key for connector '%s'", symbol, cfg.connector)
         return cached
     if delay > 0:
-        time.sleep(delay)
+        _shutdown_event.wait(timeout=delay)
+        if _shutdown_event.is_set():
+            return cached
     try:
         return signal_service.generate(symbol, cfg)
     except ConnectorAuthError:
@@ -84,10 +87,15 @@ class StockCard(Widget):
             super().__init__()
             self.symbol = symbol
 
-    def __init__(self, symbol: str) -> None:
+    def __init__(self, symbol: str, initial_signal: UserAgentRecommendation | None = None) -> None:
         super().__init__(classes=CARD_CLASS)
         self._symbol = symbol
         self._safe_id = symbol.replace(".", "-")
+        self._initial_signal = initial_signal
+
+    def on_mount(self) -> None:
+        if self._initial_signal is not None:
+            self.update_signal(self._initial_signal)
 
     def on_click(self, event: Click) -> None:
         self.post_message(self.Selected(self._symbol))
@@ -189,6 +197,12 @@ class StockGridWidget(Widget):
     def compose(self) -> ComposeResult:
         yield Grid(id=CARDS_GRID_ID)
 
+    def on_mount(self) -> None:
+        _shutdown_event.clear()
+
+    def on_unmount(self) -> None:
+        _shutdown_event.set()
+
     def load(self) -> None:
         symbols = [ts.symbol for ts in symbol_repo.get_all()]
         grid = self.query_one(f"#{CARDS_GRID_ID}", Grid)
@@ -197,7 +211,8 @@ class StockGridWidget(Widget):
             grid.mount(Static("No symbols. Press [S] to add.", classes=CLASS_LOADING))
             return
         for symbol in symbols:
-            grid.mount(StockCard(symbol))
+            cached = recommendation_repo.get_latest_by_symbol(symbol)
+            grid.mount(StockCard(symbol, initial_signal=cached))
         cfg = app_config.load()
         provider = cfg.provider or "mock"
         service = create_service(provider)
