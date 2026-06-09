@@ -1,5 +1,8 @@
+import logging
+
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
+from textual.worker import Worker, WorkerState
 
 from config import config as app_config
 from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
@@ -10,9 +13,12 @@ from ui.screens.agent_manager import AgentManagerScreen
 from ui.screens.chart import ChartScreen
 from ui.screens.connector_picker import ConnectorPickerScreen
 from ui.screens.provider_picker import ProviderPickerScreen
+from ui.screens.log_viewer import LogViewerScreen
 from ui.screens.recommendation_history import RecommendationHistoryScreen
 from ui.screens.signal_settings import SignalSettingsScreen
 from ui.screens.symbol_manager import SymbolManagerScreen
+
+_log = logging.getLogger(__name__)
 
 
 class Dashboard(App):
@@ -25,6 +31,7 @@ class Dashboard(App):
         ("c", "pick_connector", "Connector"),
         ("i", "signal_settings", "Signals"),
         ("h", "push_history", "History"),
+        ("l", "push_log_viewer", "Logs"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -75,9 +82,11 @@ class Dashboard(App):
 
     def action_request_quit(self) -> None:
         if len(self.screen_stack) == 1:
+
             def _on_confirm(confirmed: bool | None) -> None:
                 if confirmed:
                     self.exit()
+
             self.push_screen(ConfirmModal("Quit the app?"), _on_confirm)
 
     def action_pick_provider(self) -> None:
@@ -98,5 +107,12 @@ class Dashboard(App):
     def action_signal_settings(self) -> None:
         self.push_screen(SignalSettingsScreen())
 
+    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        if event.worker.name == "eval-pending" and event.worker.state == WorkerState.ERROR:
+            _log.error("background evaluation failed: %s", event.worker.error)
+
     def action_push_history(self) -> None:
         self.push_screen(RecommendationHistoryScreen())
+
+    def action_push_log_viewer(self) -> None:
+        self.push_screen(LogViewerScreen())
