@@ -7,6 +7,9 @@ from models.timeframe import Timeframe
 
 
 class DataSource(ABC):
+    def __init__(self, **kwargs) -> None:
+        pass
+
     @abstractmethod
     def fetch_ohlcv(self, symbol: str, timeframe: Timeframe, limit: int = 100) -> dict[str, Any]: ...
 
@@ -15,3 +18,5 @@ class DataSource(ABC):
 
 
 class SourceError(Exception): ...
+class SourceAuthError(SourceError): ...
+class SourceRateLimitError(SourceError): ...
