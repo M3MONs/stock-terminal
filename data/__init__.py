@@ -7,7 +7,8 @@ from data.base import DataSource
 from models.ohlcv_series import OHLCVSeries
 from models.stock_meta import StockMeta
 from models.timeframe import Timeframe
-from data.registry import get_source
+from data.registry import get_source, get_source_key_field
+from security.keystore import get_secret
 
 _discovered = False
 
@@ -46,4 +47,6 @@ class StockDataService:
 
 
 def create_service(provider: str) -> StockDataService:
-    return StockDataService(source=get_source(provider), adapter=get_adapter(provider))
+    field = get_source_key_field(provider)
+    api_key = get_secret(field) if field else ""
+    return StockDataService(source=get_source(provider, api_key=api_key), adapter=get_adapter(provider))
