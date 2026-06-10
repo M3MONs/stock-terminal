@@ -3,11 +3,11 @@ import threading
 from datetime import datetime, timezone
 
 from textual.app import ComposeResult
-from textual.containers import Grid
+from textual.containers import Grid, Horizontal
+from textual.css.query import NoMatches
 from textual.events import Click, Key
 from textual.message import Message
 from textual.widget import Widget
-from textual.containers import Horizontal
 from textual.widgets import Button, Label, Static
 from textual.worker import Worker, WorkerState
 
@@ -16,6 +16,7 @@ from connectors.base import ConnectorAuthError, ConnectorError, ConnectorNotConf
 from connectors.registry import get_connector_key_field
 from security.keystore import get_secret
 from data import create_service
+from data.base import SourceAuthError, SourceError, SourceRateLimitError
 from models.app_config import AppConfig
 from models.stock_meta import StockMeta
 from models.user_agent_recommendation import UserAgentRecommendation
@@ -92,9 +93,15 @@ class StockCard(Widget):
         self._symbol = symbol
         self._safe_id = symbol.replace(".", "-")
         self._initial_signal = initial_signal
+        self._pending_error: str | None = None
+        self._pending_meta: StockMeta | None = None
 
     def on_mount(self) -> None:
-        if self._initial_signal is not None:
+        if self._pending_meta is not None:
+            self.update(self._pending_meta)
+        elif self._pending_error is not None:
+            self._apply_error(self._pending_error)
+        elif self._initial_signal is not None:
             self.update_signal(self._initial_signal)
 
     def on_click(self, event: Click) -> None:
@@ -116,8 +123,14 @@ class StockCard(Widget):
         yield Label("", id=f"{SLTP_ID_PREFIX}{self._safe_id}", classes=CLASS_SLTP)
 
     def update(self, meta: StockMeta) -> None:
-        price_label = self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label)
-        change_label = self.query_one(f"#{CHANGE_ID_PREFIX}{self._safe_id}", Label)
+        if not self.is_attached:
+            return
+        try:
+            price_label = self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label)
+            change_label = self.query_one(f"#{CHANGE_ID_PREFIX}{self._safe_id}", Label)
+        except NoMatches:
+            self._pending_meta = meta
+            return
 
         if meta.price is not None:
             price_label.remove_class(CLASS_LOADING)
@@ -137,10 +150,22 @@ class StockCard(Widget):
         event.stop()
         self.post_message(self.SignalRefreshRequested(self._symbol))
 
-    def set_error(self) -> None:
-        self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label).update("error")
+    def _apply_error(self, msg: str) -> None:
+        label = self.query_one(f"#{PRICE_ID_PREFIX}{self._safe_id}", Label)
+        label.remove_class(CLASS_LOADING)
+        label.update(msg)
+
+    def set_error(self, msg: str = "⚠ not supported") -> None:
+        if not self.is_attached:
+            return
+        try:
+            self._apply_error(msg)
+        except NoMatches:
+            self._pending_error = msg
 
     def set_signal_loading(self) -> None:
+        if not self.is_attached:
+            return
         label = self.query_one(f"#{SIGNAL_ID_PREFIX}{self._safe_id}", Label)
         label.remove_class(CLASS_SIGNAL_BUY, CLASS_SIGNAL_SELL, CLASS_SIGNAL_HOLD, CLASS_SIGNAL_NEUTRAL)
         label.add_class(CLASS_SIGNAL_NEUTRAL)
@@ -149,6 +174,8 @@ class StockCard(Widget):
         self.query_one(f"#refresh-{self._safe_id}", Button).disabled = True
 
     def set_signal_error(self, msg: str = "⚠ error") -> None:
+        if not self.is_attached:
+            return
         label = self.query_one(f"#{SIGNAL_ID_PREFIX}{self._safe_id}", Label)
         label.remove_class(CLASS_SIGNAL_BUY, CLASS_SIGNAL_SELL, CLASS_SIGNAL_HOLD, CLASS_SIGNAL_NEUTRAL)
         label.add_class(CLASS_SIGNAL_NEUTRAL)
@@ -156,6 +183,8 @@ class StockCard(Widget):
         self.query_one(f"#refresh-{self._safe_id}", Button).disabled = False
 
     def update_signal(self, rec: UserAgentRecommendation | None) -> None:
+        if not self.is_attached:
+            return
         label = self.query_one(f"#{SIGNAL_ID_PREFIX}{self._safe_id}", Label)
         sltp_label = self.query_one(f"#{SLTP_ID_PREFIX}{self._safe_id}", Label)
         label.remove_class(CLASS_SIGNAL_BUY, CLASS_SIGNAL_SELL, CLASS_SIGNAL_HOLD, CLASS_SIGNAL_NEUTRAL)
@@ -265,7 +294,7 @@ class StockGridWidget(Widget):
             if card is None:
                 return
             if event.worker.state == WorkerState.SUCCESS:
-                card.update_signal(event.worker.result)
+                self.call_after_refresh(card.update_signal, event.worker.result)
             elif event.worker.state == WorkerState.ERROR:
                 err = event.worker.error
                 if isinstance(err, ConnectorAuthError):
@@ -276,7 +305,7 @@ class StockGridWidget(Widget):
                     msg = f"⚠ connector: {err}"
                 else:
                     msg = f"⚠ {err}" if err else "⚠ error"
-                card.set_signal_error(msg)
+                self.call_after_refresh(card.set_signal_error, msg)
             return
         if not name.startswith(WORKER_PREFIX):
             return
@@ -286,6 +315,15 @@ class StockGridWidget(Widget):
         if card is None:
             return
         if event.worker.state == WorkerState.SUCCESS and event.worker.result is not None:
-            card.update(event.worker.result)
+            self.call_after_refresh(card.update, event.worker.result)
         elif event.worker.state == WorkerState.ERROR:
-            card.set_error()
+            err = event.worker.error
+            if isinstance(err, SourceAuthError):
+                msg = "⚠ no API key"
+            elif isinstance(err, SourceRateLimitError):
+                msg = "⚠ rate limit"
+            elif isinstance(err, SourceError):
+                msg = "⚠ not supported"
+            else:
+                msg = "⚠ error"
+            self.call_after_refresh(card.set_error, msg)
