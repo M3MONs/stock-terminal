@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 
+from config.config import Config
 from config.paths import AGENTS_DIR
 from models.user_agent import UserAgent
 from repositories.user_agent_repository import UserAgentRepository
@@ -16,8 +17,9 @@ def _validate_agent_name(name: str) -> None:
 
 
 class AgentService:
-    def __init__(self, repository: UserAgentRepository) -> None:
+    def __init__(self, repository: UserAgentRepository, cfg: Config | None = None) -> None:
         self._repository = repository
+        self._cfg = cfg
 
     def get_all(self) -> list[UserAgent]:
         return self._repository.get_all()
@@ -36,7 +38,17 @@ class AgentService:
         self._repository.remove(agent_id)
 
     def set_enabled(self, agent_id: int, enabled: bool) -> None:
-        self._repository.set_enabled(agent_id, enabled)
+        if enabled:
+            self._repository.disable_all()
+            self._repository.set_enabled(agent_id, True)
+            agent = next((a for a in self._repository.get_all() if a.id == agent_id), None)
+            agent_name = agent.name if agent else ""
+        else:
+            self._repository.set_enabled(agent_id, False)
+            agent_name = ""
+        if self._cfg is not None:
+            cfg = self._cfg.load()
+            self._cfg.save(cfg.model_copy(update={"signal_agent": agent_name}))
 
     def update_content(self, file_path: str, text: str) -> None:
         resolved = Path(file_path).resolve()
