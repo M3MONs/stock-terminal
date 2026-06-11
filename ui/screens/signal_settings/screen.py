@@ -7,17 +7,10 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView
 
 from config import config as app_config
 from models.timeframe import Timeframe
-from repositories import user_agent_repo
 from .constants import BINDINGS
 from .styles import CSS
 
-_NO_AGENT = ""
 _LIST_CONFIG = {
-    "agent-list": (
-        "signal_agent",
-        lambda value: value or _NO_AGENT,
-        "agent",
-    ),
     "fast-tf-list": (
         "signal_timeframe_fast",
         lambda value: Timeframe(value) if value else None,
@@ -42,8 +35,6 @@ class SignalSettingsScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
             yield Label("Signal Settings", id="title")
-            yield Label("Agent:")
-            yield ListView(*self._agent_items(), id="agent-list")
             yield Label("Interval (minutes):")
             yield Input(
                 value=str(self._cfg.signal_interval),
@@ -55,19 +46,6 @@ class SignalSettingsScreen(ModalScreen[None]):
             yield Label("Slow timeframe (context):")
             yield ListView(*self._tf_items("slow"), id="slow-tf-list")
         yield Footer()
-
-    def _agent_items(self) -> list[ListItem]:
-        values = [(_NO_AGENT, "(none)")]
-
-        values.extend(
-            (agent.name, agent.name)
-            for agent in user_agent_repo.get_all()
-        )
-
-        return self._build_list_items(
-            values,
-            self._cfg.signal_agent,
-        )
 
     def _tf_items(self, which: str) -> list[ListItem]:
         current = (
@@ -144,7 +122,7 @@ class SignalSettingsScreen(ModalScreen[None]):
     def _refresh_list(self, list_id: str, which: str) -> None:
         lv = self.query_one(f"#{list_id}", ListView)
         lv.clear()
-        self._append_list_view(lv, self._agent_items() if which == "agent" else self._tf_items(which))
+        self._append_list_view(lv, self._tf_items(which))
 
     def _append_list_view(self, lv: ListView, items: list[ListItem]) -> None:
         for item in items:
