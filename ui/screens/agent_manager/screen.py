@@ -7,6 +7,7 @@ from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Input, Label
 
 from models.user_agent import UserAgent
+from config import config as app_config
 from repositories import user_agent_repo
 from services.agent_service import AgentService
 from ui.components.confirm_modal import ConfirmModal
@@ -21,7 +22,7 @@ class AgentManagerScreen(ModalScreen[None]):
 
     def __init__(self) -> None:
         super().__init__()
-        self._service = AgentService(user_agent_repo)
+        self._service = AgentService(user_agent_repo, app_config)
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
@@ -41,7 +42,7 @@ class AgentManagerScreen(ModalScreen[None]):
         table.add_column(COL_FILE, key="file")
         table.add_column(COL_STATUS, key="status")
         for agent in self._service.get_all():
-            status = "enabled" if agent.enabled else "disabled"
+            status = "active" if agent.enabled else "inactive"
             table.add_row(agent.name, Path(agent.file_path).name, status, key=str(agent.id))
 
     def _selected_agent_id(self) -> int | None:
