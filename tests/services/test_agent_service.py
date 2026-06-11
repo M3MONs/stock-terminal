@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
+from models.app_config import AppConfig
+from models.user_agent import UserAgent
 from services.agent_service import AgentService, _validate_agent_name
 
 
@@ -47,6 +49,46 @@ class TestAgentServiceAdd:
         with patch("services.agent_service.AGENTS_DIR", tmp_path):
             service.add("valid-agent")
         repo.add.assert_called_once()
+
+
+class TestAgentServiceSetEnabled:
+    def _make_agent(self, agent_id: int, name: str, enabled: bool) -> UserAgent:
+        return UserAgent(id=agent_id, name=name, file_path=f"/tmp/{name}.md", enabled=enabled)
+
+    def _make_service(self, agents: list[UserAgent]):
+        repo = MagicMock()
+        repo.get_all.return_value = agents
+        cfg = MagicMock()
+        cfg.load.return_value = AppConfig()
+        return AgentService(repo, cfg), repo, cfg
+
+    def test_enable_disables_all_others_first(self):
+        agent = self._make_agent(1, "alpha", False)
+        service, repo, _ = self._make_service([agent])
+        service.set_enabled(1, True)
+        repo.disable_all.assert_called_once()
+        repo.set_enabled.assert_called_once_with(1, True)
+
+    def test_enable_saves_agent_name_to_config(self):
+        agent = self._make_agent(1, "alpha", True)
+        service, repo, cfg = self._make_service([agent])
+        service.set_enabled(1, True)
+        saved = cfg.save.call_args[0][0]
+        assert saved.signal_agent == "alpha"
+
+    def test_disable_saves_empty_signal_agent(self):
+        agent = self._make_agent(1, "alpha", True)
+        service, repo, cfg = self._make_service([agent])
+        service.set_enabled(1, False)
+        repo.disable_all.assert_not_called()
+        saved = cfg.save.call_args[0][0]
+        assert saved.signal_agent == ""
+
+    def test_no_config_injected_does_not_crash(self):
+        repo = MagicMock()
+        repo.get_all.return_value = [self._make_agent(1, "alpha", True)]
+        service = AgentService(repo)
+        service.set_enabled(1, True)  # must not raise
 
 
 class TestAgentServiceUpdateContent:
