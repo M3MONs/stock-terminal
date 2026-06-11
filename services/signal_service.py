@@ -62,18 +62,6 @@ class SignalService:
         self._recommendation_repo = recommendation_repo
         self._user_agent_repo = user_agent_repo
 
-    def _load_agent_context(self, agent_name: str) -> str:
-        if not agent_name:
-            return ""
-        agent = next((a for a in self._user_agent_repo.get_all() if a.name == agent_name), None)
-        if agent is None:
-            return ""
-        try:
-            return Path(agent.file_path).read_text(encoding="utf-8")
-        except OSError:
-            _log.warning("agent file missing or unreadable: %s", agent.file_path)
-            return ""
-
     def generate(self, symbol: str, cfg: AppConfig) -> UserAgentRecommendation:
         _log.info("signal: generating %s via %s (fast=%s slow=%s)", symbol, cfg.connector, cfg.signal_timeframe_fast.value, cfg.signal_timeframe_slow.value)
         service = create_service(cfg.provider)
@@ -87,12 +75,21 @@ class SignalService:
             fast_candles=_format_candles(fast_ohlcv),
             slow_candles=_format_candles(slow_ohlcv),
         )
-        agent_context = self._load_agent_context(cfg.signal_agent)
+
+        active_agent = next((a for a in self._user_agent_repo.get_all() if a.enabled), None)
+        agent_name = active_agent.name if active_agent else ""
+        agent_context = ""
+        if active_agent:
+            try:
+                agent_context = Path(active_agent.file_path).read_text(encoding="utf-8")
+            except OSError:
+                _log.warning("agent file missing or unreadable: %s", active_agent.file_path)
+
         prompt = f"{agent_context}\n\n---\n{base_prompt}" if agent_context else base_prompt
 
         key_field = get_connector_key_field(cfg.connector)
         api_key = get_secret(key_field) if key_field else ""
-        _log.debug("signal: connector=%s key_field=%s has_key=%s", cfg.connector, key_field, bool(api_key))
+        _log.debug("signal: connector=%s key_field=%s has_key=%s agent=%s", cfg.connector, key_field, bool(api_key), agent_name)
         connector = get_connector(cfg.connector, api_key=api_key)
 
         try:
@@ -101,9 +98,9 @@ class SignalService:
             _log.error("signal: %s failed via %s — %s", symbol, cfg.connector, e, exc_info=True)
             raise
 
-        _log.info("signal: %s → %s sl=%s tp=%s", symbol, response.option, response.stop_loss, response.stop_profit)
+        _log.info("signal: %s → %s sl=%s tp=%s agent=%s", symbol, response.option, response.stop_loss, response.stop_profit, agent_name)
         return self._recommendation_repo.add(
-            agent=cfg.signal_agent,
+            agent=agent_name,
             symbol=symbol,
             option=response.option,
             stop_loss=response.stop_loss,
