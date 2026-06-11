@@ -2,6 +2,9 @@
 
 An AI-powered terminal stock tracker built with [Textual](https://github.com/Textualize/textual). Watch symbols, view OHLCV candlestick charts, and generate AI trading signals — all from the terminal.
 
+<img width="1966" height="574" alt="image" src="https://github.com/user-attachments/assets/7b249b3b-2e62-4edb-a38c-850d799c1f8c" />
+
+
 ## Features
 
 - **Symbol watchlist** — add/remove/tag symbols, persisted in SQLite
