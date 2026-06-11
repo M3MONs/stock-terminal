@@ -12,6 +12,7 @@ class UserAgentRepository:
     _ADD_QUERY = "INSERT INTO user_agents (name, file_path) VALUES (?, ?) RETURNING id, name, file_path, enabled"
     _DELETE_QUERY = "DELETE FROM user_agents WHERE id = ?"
     _SET_ENABLED_QUERY = "UPDATE user_agents SET enabled = ? WHERE id = ?"
+    _DISABLE_ALL_QUERY = "UPDATE user_agents SET enabled = 0"
 
     def get_all(self) -> list[UserAgent]:
         with self.connection_factory() as conn:
@@ -27,6 +28,10 @@ class UserAgentRepository:
     def remove(self, agent_id: int) -> None:
         with self.connection_factory() as conn:
             conn.execute(self._DELETE_QUERY, (agent_id,))
+
+    def disable_all(self) -> None:
+        with self.connection_factory() as conn:
+            conn.execute(self._DISABLE_ALL_QUERY)
 
     def set_enabled(self, agent_id: int, enabled: bool) -> None:
         with self.connection_factory() as conn:
