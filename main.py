@@ -1,10 +1,13 @@
 from config.logging import setup_logging
+from config.paths import AGENTS_DIR, KNOWLEDGE_DIR
 from db import init_db
 from ui.dashboard import Dashboard
 
 
 def main() -> None:
     setup_logging()
+    AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+    KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
     Dashboard().run()
 
