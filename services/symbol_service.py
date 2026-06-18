@@ -1,3 +1,4 @@
+from config.paths import KNOWLEDGE_DIR
 from models.tagged_symbol import TaggedSymbol
 from validators.base import SymbolValidator
 from validators.default import DefaultSymbolValidator
@@ -17,6 +18,7 @@ class SymbolService:
         if error:
             raise ValueError(error)
         self._repository.add(symbol)
+        (KNOWLEDGE_DIR / symbol.upper()).mkdir(parents=True, exist_ok=True)
 
     def remove(self, symbol: str) -> None:
         self._repository.remove(symbol)
