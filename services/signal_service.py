@@ -9,6 +9,8 @@ from pydantic import BaseModel
 
 from connectors.registry import get_connector, get_connector_key_field
 from data import create_service
+from knowledge import load_knowledge
+from .prompt_template import PROMPT_TEMPLATE as _PROMPT_TEMPLATE
 from models.app_config import AppConfig
 from models.user_agent_recommendation import TradingOption, UserAgentRecommendation
 from repositories.user_agent_recommendation_repository import UserAgentRecommendationRepository
@@ -24,26 +26,6 @@ class _SignalResponse(BaseModel):
     stop_profit: Decimal | None = None
     target_date: date | None = None
 
-
-_PROMPT_TEMPLATE = """\
-You are a professional trading signal analyst.
-
-Analyze the following candlestick data for {symbol} and provide a trading signal.
-
-## {fast_tf} candles (recent, for signal timing):
-{fast_candles}
-
-## {slow_tf} candles (context, for trend direction):
-{slow_candles}
-
-Based on this multi-timeframe analysis, provide a trading signal for the {fast_tf} timeframe.
-
-Respond with:
-- option: one of "BUY", "SELL", or "HOLD"
-- stop_loss: price level for stop loss (optional)
-- stop_profit: price level for take profit (optional)
-- target_date: estimated date to close the position in YYYY-MM-DD format — always provide a specific date
-"""
 
 
 def _format_candles(series) -> str:
@@ -84,6 +66,11 @@ class SignalService:
                 agent_context = Path(active_agent.file_path).read_text(encoding="utf-8")
             except OSError:
                 _log.warning("agent file missing or unreadable: %s", active_agent.file_path)
+
+        knowledge = load_knowledge(symbol)
+        if knowledge:
+            _log.debug("signal: injecting knowledge for %s (%d chars)", symbol, len(knowledge))
+            base_prompt = f"## Company Knowledge Base\n{knowledge}\n\n---\n{base_prompt}"
 
         prompt = f"{agent_context}\n\n---\n{base_prompt}" if agent_context else base_prompt
 

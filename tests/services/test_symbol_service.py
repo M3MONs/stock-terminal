@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -48,3 +48,10 @@ def test_remove_delegates_to_repo(service, repo):
 def test_update_tags_delegates_to_repo(service, repo):
     service.update_tags("AAPL", ["tech", "large-cap"])
     repo.update_tags.assert_called_once_with("AAPL", ["tech", "large-cap"])
+
+
+def test_add_creates_knowledge_folder(repo, tmp_path):
+    with patch("services.symbol_service.KNOWLEDGE_DIR", tmp_path):
+        service = SymbolService(repository=repo)
+        service.add("AAPL")
+    assert (tmp_path / "AAPL").is_dir()
