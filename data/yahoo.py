@@ -77,3 +77,9 @@ class YahooSource(DataSource):
         if not info.get("symbol") and not info.get("regularMarketPrice") and not info.get("currentPrice"):
             raise SourceError(f"Symbol not found: {symbol}")
         return info
+
+    def fetch_fundamentals(self, symbol: str) -> dict[str, Any]:
+        try:
+            return yf.Ticker(symbol).info
+        except Exception as e:
+            raise SourceError(str(e)) from e
