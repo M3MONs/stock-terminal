@@ -16,6 +16,9 @@ class DataSource(ABC):
     @abstractmethod
     def fetch_meta(self, symbol: str) -> dict[str, Any]: ...
 
+    def fetch_fundamentals(self, symbol: str) -> dict[str, Any]:
+        return {}
+
 
 class SourceError(Exception): ...
 class SourceAuthError(SourceError): ...
