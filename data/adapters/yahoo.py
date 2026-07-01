@@ -6,6 +6,7 @@ from typing import Any
 from data.adapters.base import DataAdapter, AdapterError
 from data.adapters.registry import register_adapter
 from models.candle import Candle
+from models.fundamentals import StockFundamentals
 from models.ohlcv_series import OHLCVSeries
 from models.stock_meta import StockMeta
 from models.timeframe import Timeframe
@@ -45,4 +46,28 @@ class YahooAdapter(DataAdapter):
             currency=raw.get("currency", "USD"),
             price=Decimal(str(raw_price)) if raw_price is not None else None,
             change_pct=float(raw_change) if raw_change is not None else None,
+        )
+
+    def to_fundamentals(self, raw: dict[str, Any]) -> StockFundamentals | None:
+        if not raw:
+            return None
+
+        def _f(key: str) -> float | None:
+            v = raw.get(key)
+            return float(v) if v is not None else None
+
+        return StockFundamentals(
+            market_cap=raw.get("marketCap"),
+            trailing_pe=_f("trailingPE"),
+            forward_pe=_f("forwardPE"),
+            peg_ratio=_f("pegRatio"),
+            price_to_book=_f("priceToBook"),
+            profit_margins=_f("profitMargins"),
+            revenue_growth=_f("revenueGrowth"),
+            debt_to_equity=_f("debtToEquity"),
+            return_on_equity=_f("returnOnEquity"),
+            dividend_yield=_f("dividendYield"),
+            fifty_two_week_high=_f("fiftyTwoWeekHigh"),
+            fifty_two_week_low=_f("fiftyTwoWeekLow"),
+            beta=_f("beta"),
         )
