@@ -12,6 +12,7 @@ from data import create_service
 from knowledge import load_knowledge
 from .prompt_template import PROMPT_TEMPLATE as _PROMPT_TEMPLATE
 from models.app_config import AppConfig
+from models.fundamentals import StockFundamentals
 from models.user_agent_recommendation import TradingOption, UserAgentRecommendation
 from repositories.user_agent_recommendation_repository import UserAgentRecommendationRepository
 from repositories.user_agent_repository import UserAgentRepository
@@ -35,6 +36,41 @@ def _format_candles(series) -> str:
     return "\n".join(lines)
 
 
+def _format_fundamentals(f: StockFundamentals) -> str:
+    def _pct(v: float | None) -> str:
+        return f"{v * 100:.2f}%" if v is not None else "N/A"
+
+    def _num(v: float | int | None, decimals: int = 2) -> str:
+        return f"{v:.{decimals}f}" if v is not None else "N/A"
+
+    def _cap(v: int | None) -> str:
+        if v is None:
+            return "N/A"
+        if v >= 1_000_000_000_000:
+            return f"${v / 1_000_000_000_000:.2f}T"
+        if v >= 1_000_000_000:
+            return f"${v / 1_000_000_000:.2f}B"
+        return f"${v / 1_000_000:.2f}M"
+
+    lines = [
+        "\n## Fundamental Data:",
+        f"- Market Cap: {_cap(f.market_cap)}",
+        f"- P/E (Trailing): {_num(f.trailing_pe)}",
+        f"- P/E (Forward): {_num(f.forward_pe)}",
+        f"- PEG Ratio: {_num(f.peg_ratio)}",
+        f"- Price/Book: {_num(f.price_to_book)}",
+        f"- Profit Margin: {_pct(f.profit_margins)}",
+        f"- Revenue Growth: {_pct(f.revenue_growth)}",
+        f"- Debt/Equity: {_num(f.debt_to_equity)}",
+        f"- Return on Equity: {_pct(f.return_on_equity)}",
+        f"- Dividend Yield: {_pct(f.dividend_yield)}",
+        f"- 52-Week High: {_num(f.fifty_two_week_high)}",
+        f"- 52-Week Low: {_num(f.fifty_two_week_low)}",
+        f"- Beta: {_num(f.beta)}",
+    ]
+    return "\n".join(lines)
+
+
 class SignalService:
     def __init__(
         self,
@@ -50,12 +86,22 @@ class SignalService:
         fast_ohlcv = service.get_ohlcv(symbol, cfg.signal_timeframe_fast, limit=100)
         slow_ohlcv = service.get_ohlcv(symbol, cfg.signal_timeframe_slow, limit=50)
 
+        try:
+            fundamentals = service.get_fundamentals(symbol)
+            _log.debug("signal: fundamentals fetched for %s", symbol)
+        except Exception:
+            _log.warning("signal: fundamentals unavailable for %s", symbol, exc_info=True)
+            fundamentals = None
+
+        fundamentals_section = _format_fundamentals(fundamentals) if fundamentals else ""
+
         base_prompt = _PROMPT_TEMPLATE.format(
             symbol=symbol,
             fast_tf=cfg.signal_timeframe_fast.value,
             slow_tf=cfg.signal_timeframe_slow.value,
             fast_candles=_format_candles(fast_ohlcv),
             slow_candles=_format_candles(slow_ohlcv),
+            fundamentals=fundamentals_section,
         )
 
         active_agent = next((a for a in self._user_agent_repo.get_all() if a.enabled), None)
