@@ -8,7 +8,7 @@ Analyze the following candlestick data for {symbol} and provide a trading signal
 
 ## {slow_tf} candles (context, for trend direction):
 {slow_candles}
-
+{fundamentals}
 Based on this multi-timeframe analysis, provide a trading signal for the {fast_tf} timeframe.
 
 Respond with:
