@@ -143,5 +143,5 @@ class SignalService:
 
 
 def generate(symbol: str, cfg: AppConfig) -> UserAgentRecommendation:
-    from repositories import recommendation_repo, user_agent_repo
+    from persistence.repositories import recommendation_repo, user_agent_repo
     return SignalService(recommendation_repo, user_agent_repo).generate(symbol, cfg)
