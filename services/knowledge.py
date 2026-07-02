@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from config.paths import KNOWLEDGE_DIR
+from infra.paths import KNOWLEDGE_DIR
 
 _log = logging.getLogger(__name__)
 

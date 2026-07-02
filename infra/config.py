@@ -3,7 +3,7 @@ import logging
 from pydantic import ValidationError
 
 from models.app_config import AppConfig
-from repositories.config_repository import ConfigRepository
+from persistence.repositories.config_repository import ConfigRepository
 
 _log = logging.getLogger(__name__)
 

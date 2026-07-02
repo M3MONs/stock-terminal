@@ -4,8 +4,8 @@ from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Input, Label
 
-from config import config as app_config
-from repositories import symbol_repo
+from infra import config as app_config
+from persistence.repositories import symbol_repo
 from services.symbol_service import SymbolService
 from ui.components.confirm_modal import ConfirmModal
 from validators import get_validator

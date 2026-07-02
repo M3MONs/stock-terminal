@@ -4,7 +4,7 @@ import threading
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
-from config import config as app_config
+from infra import config as app_config
 from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
 from ui.components.confirm_modal import ConfirmModal
 from ui.components.stock_grid import StockGridWidget

@@ -9,7 +9,7 @@ from models.ohlcv_series import OHLCVSeries
 from models.stock_meta import StockMeta
 from models.timeframe import Timeframe
 from data.registry import get_source, get_source_key_field
-from security.keystore import get_secret
+from infra.security.keystore import get_secret
 
 _discovered = False
 

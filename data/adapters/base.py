@@ -16,7 +16,6 @@ class DataAdapter(ABC):
     @abstractmethod
     def to_stock_meta(self, raw: dict[str, Any], symbol: str) -> StockMeta: ...
 
-    @abstractmethod
     def to_fundamentals(self, raw: dict[str, Any]) -> StockFundamentals | None:
         return None
 

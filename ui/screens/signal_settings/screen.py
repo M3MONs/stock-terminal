@@ -5,7 +5,7 @@ from textual.containers import Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Input, Label, ListItem, ListView
 
-from config import config as app_config
+from infra import config as app_config
 from models.timeframe import Timeframe
 from .constants import BINDINGS
 from .styles import CSS

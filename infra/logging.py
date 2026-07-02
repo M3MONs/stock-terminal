@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from config.paths import LOG_PATH
+from infra.paths import LOG_PATH
 
 _NOISY_LIBS = ("httpx", "httpcore", "yfinance", "openai", "google")
 _LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"

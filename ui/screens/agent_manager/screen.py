@@ -7,8 +7,8 @@ from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Input, Label
 
 from models.user_agent import UserAgent
-from config import config as app_config
-from repositories import user_agent_repo
+from infra import config as app_config
+from persistence.repositories import user_agent_repo
 from services.agent_service import AgentService
 from ui.components.confirm_modal import ConfirmModal
 from .constants import BINDINGS, COL_FILE, COL_NAME, COL_STATUS

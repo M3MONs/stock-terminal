@@ -3,7 +3,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Header, Label
 from textual.worker import Worker, WorkerState
 
-from config import config as app_config
+from infra import config as app_config
 from data import create_service
 from models.timeframe import Timeframe
 from ui.components.candle_chart import CandleChartWidget

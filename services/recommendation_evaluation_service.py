@@ -9,7 +9,7 @@ from data import StockDataService
 from models.candle import Candle
 from models.timeframe import Timeframe
 from models.user_agent_recommendation import Outcome, TradingOption, UserAgentRecommendation
-from repositories.user_agent_recommendation_repository import UserAgentRecommendationRepository
+from persistence.repositories.user_agent_recommendation_repository import UserAgentRecommendationRepository
 
 _log = logging.getLogger(__name__)
 

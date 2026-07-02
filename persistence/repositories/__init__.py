@@ -1,4 +1,4 @@
-from db import get_connection
+from persistence import get_connection
 from .config_repository import ConfigRepository
 from .symbol_repository import SymbolRepository
 from .user_agent_recommendation_repository import UserAgentRecommendationRepository

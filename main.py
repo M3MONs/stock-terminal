@@ -1,6 +1,6 @@
-from config.logging import setup_logging
-from config.paths import AGENTS_DIR, KNOWLEDGE_DIR
-from db import init_db
+from infra.logging import setup_logging
+from infra.paths import AGENTS_DIR, KNOWLEDGE_DIR
+from persistence import init_db
 from ui.dashboard import Dashboard
 
 

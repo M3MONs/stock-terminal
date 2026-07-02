@@ -4,7 +4,7 @@ import keyring.errors
 import pytest
 from typing import ClassVar
 
-from security.keystore import get_secret, set_secret
+from infra.security.keystore import get_secret, set_secret
 
 
 class _MemoryKeyring(keyring.backend.KeyringBackend):

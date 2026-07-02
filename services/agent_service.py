@@ -1,10 +1,10 @@
 import sqlite3
 from pathlib import Path
 
-from config.config import Config
-from config.paths import AGENTS_DIR
+from infra.config import Config
+from infra.paths import AGENTS_DIR
 from models.user_agent import UserAgent
-from repositories.user_agent_repository import UserAgentRepository
+from persistence.repositories.user_agent_repository import UserAgentRepository
 
 
 def _validate_agent_name(name: str) -> None:

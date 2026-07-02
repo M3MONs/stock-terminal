@@ -3,9 +3,9 @@ from textual.containers import Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Input, Label, ListItem, ListView
 
-from config import config as app_config
+from infra import config as app_config
 from data.registry import get_source_key_field, list_sources
-from security.keystore import get_secret, set_secret
+from infra.security.keystore import get_secret, set_secret
 from .constants import BINDINGS
 from .styles import CSS
 

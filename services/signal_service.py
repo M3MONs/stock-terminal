@@ -9,14 +9,14 @@ from pydantic import BaseModel
 
 from connectors.registry import get_connector, get_connector_key_field
 from data import create_service
-from knowledge import load_knowledge
+from services.knowledge import load_knowledge
 from .prompt_template import PROMPT_TEMPLATE as _PROMPT_TEMPLATE
 from models.app_config import AppConfig
 from models.fundamentals import StockFundamentals
 from models.user_agent_recommendation import TradingOption, UserAgentRecommendation
-from repositories.user_agent_recommendation_repository import UserAgentRecommendationRepository
-from repositories.user_agent_repository import UserAgentRepository
-from security.keystore import get_secret
+from persistence.repositories.user_agent_recommendation_repository import UserAgentRecommendationRepository
+from persistence.repositories.user_agent_repository import UserAgentRepository
+from infra.security.keystore import get_secret
 
 _log = logging.getLogger(__name__)
 

@@ -11,16 +11,16 @@ from textual.widget import Widget
 from textual.widgets import Button, Label, Static
 from textual.worker import Worker, WorkerState
 
-from config import config as app_config
+from infra import config as app_config
 from connectors.base import ConnectorAuthError, ConnectorError, ConnectorNotConfiguredError
 from connectors.registry import get_connector_key_field
-from security.keystore import get_secret
+from infra.security.keystore import get_secret
 from data import create_service
 from data.base import SourceAuthError, SourceError, SourceRateLimitError
 from models.app_config import AppConfig
 from models.stock_meta import StockMeta
 from models.user_agent_recommendation import UserAgentRecommendation
-from repositories import recommendation_repo, symbol_repo
+from persistence.repositories import recommendation_repo, symbol_repo
 from services import signal_service
 from .constants import (
     CARDS_GRID_ID,

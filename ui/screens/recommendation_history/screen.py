@@ -4,7 +4,7 @@ from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Input, Label
 
 from models.user_agent_recommendation import UserAgentRecommendation
-from repositories import recommendation_repo
+from persistence.repositories import recommendation_repo
 from .constants import BINDINGS, COL_AGENT, COL_DATE, COL_OPTION, COL_OUTCOME, COL_SL, COL_SP, COL_SYMBOL, COL_TARGET
 from .styles import CSS
 

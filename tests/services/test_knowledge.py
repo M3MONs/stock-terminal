@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-import knowledge as k
+import services.knowledge as k
 
 
 @pytest.fixture()
@@ -67,7 +67,7 @@ class TestLoadKnowledge:
         folder = knowledge_dir / "AAPL"
         folder.mkdir()
         (folder / "big.txt").write_text("x" * 100)
-        with caplog.at_level(logging.WARNING, logger="knowledge"):
+        with caplog.at_level(logging.WARNING, logger="services.knowledge"):
             result = k.load_knowledge("AAPL", max_chars=50)
         assert result is not None
         assert len(result) == 50
@@ -96,7 +96,7 @@ class TestLoadKnowledge:
             return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=block_pypdf):
-            with caplog.at_level(logging.WARNING, logger="knowledge"):
+            with caplog.at_level(logging.WARNING, logger="services.knowledge"):
                 result = k.load_knowledge("AAPL")
         assert result is None
         assert "pypdf not installed" in caplog.text
