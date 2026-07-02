@@ -112,9 +112,9 @@ class RecommendationEvaluationService:
 def evaluate_all_pending(
     should_cancel: Callable[[], bool] = lambda: False,
 ) -> list[tuple[UserAgentRecommendation, Outcome]]:
-    from config import config as app_config
+    from infra import config as app_config
     from data import create_service
-    from repositories import recommendation_repo
+    from persistence.repositories import recommendation_repo
     cfg = app_config.load()
     data_service = create_service(cfg.provider or "mock")
     return RecommendationEvaluationService(recommendation_repo, data_service).evaluate_all_pending(
