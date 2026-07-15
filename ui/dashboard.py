@@ -8,6 +8,7 @@ from textual.widgets import DataTable, Footer, Header
 from infra import config as app_config
 from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
 from ui.components.confirm_modal import ConfirmModal
+from ui.components.error_modal import ErrorModal
 from ui.components.stock_grid import StockGridWidget
 from ui.screens.agent_manager import AgentManagerScreen
 from ui.screens.chart import ChartScreen
@@ -65,6 +66,13 @@ class Dashboard(App):
             _eval_pending()
         except Exception:
             _log.exception("background evaluation failed")
+            self.call_from_thread(
+                self.show_error,
+                "Background evaluation failed. Check logs (l).",
+            )
+
+    def show_error(self, message: str, *, title: str = "Error") -> None:
+        self.push_screen(ErrorModal(message, title=title))
 
     def _restore_grid_focus(self) -> None:
         grid = self.query_one(StockGridWidget)
