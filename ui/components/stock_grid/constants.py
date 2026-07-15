@@ -1,21 +1,30 @@
-CARDS_GRID_ID = "stock-cards"
+TABLE_ID = "stock-table"
+EMPTY_ID = "stock-empty"
 WORKER_PREFIX = "meta_"
 SIGNAL_WORKER_PREFIX = "signal_"
 
-CARD_CLASS = "stock-card"
-CLASS_SYMBOL = "card-symbol"
-CLASS_PRICE = "card-price"
-CLASS_CHANGE_UP = "card-change-up"
-CLASS_CHANGE_DOWN = "card-change-down"
-CLASS_LOADING = "card-loading"
-CLASS_SIGNAL_BUY = "card-signal-buy"
-CLASS_SIGNAL_SELL = "card-signal-sell"
-CLASS_SIGNAL_HOLD = "card-signal-hold"
-CLASS_SIGNAL_NEUTRAL = "card-signal-neutral"
+COL_SYMBOL = "Symbol"
+COL_PRICE = "Price"
+COL_CHANGE = "Change"
+COL_SIGNAL = "Signal"
+COL_AGE = "Age"
+COL_SL = "SL"
+COL_TP = "TP"
 
-PRICE_ID_PREFIX = "price-"
-CHANGE_ID_PREFIX = "change-"
-SIGNAL_ID_PREFIX = "signal-"
-SLTP_ID_PREFIX = "sltp-"
+KEY_SYMBOL = "symbol"
+KEY_PRICE = "price"
+KEY_CHANGE = "change"
+KEY_SIGNAL = "signal"
+KEY_AGE = "age"
+KEY_SL = "sl"
+KEY_TP = "tp"
 
-CLASS_SLTP = "card-sltp"
+COLUMN_WEIGHTS: dict[str, int] = {
+    KEY_SYMBOL: 3,
+    KEY_PRICE: 3,
+    KEY_CHANGE: 2,
+    KEY_SIGNAL: 2,
+    KEY_AGE: 2,
+    KEY_SL: 2,
+    KEY_TP: 2,
+}
