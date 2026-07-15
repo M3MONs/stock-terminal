@@ -2,13 +2,13 @@ import logging
 import threading
 
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header
+from textual.css.query import NoMatches
+from textual.widgets import DataTable, Footer, Header
 
 from infra import config as app_config
 from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
 from ui.components.confirm_modal import ConfirmModal
 from ui.components.stock_grid import StockGridWidget
-from ui.components.stock_grid.widget import StockCard
 from ui.screens.agent_manager import AgentManagerScreen
 from ui.screens.chart import ChartScreen
 from ui.screens.connector_picker import ConnectorPickerScreen
@@ -25,6 +25,7 @@ class Dashboard(App):
     TITLE = "Stock-Terminal"
     BINDINGS = [
         ("q", "request_quit", "Quit"),
+        ("r", "refresh_selected_row", "Refresh row"),
         ("s", "push_symbols", "Symbols"),
         ("p", "pick_provider", "Provider"),
         ("a", "push_agents", "Agents"),
@@ -67,9 +68,13 @@ class Dashboard(App):
 
     def _restore_grid_focus(self) -> None:
         grid = self.query_one(StockGridWidget)
-        cards = list(grid.query(StockCard))
-        if cards:
-            cards[0].focus()
+        try:
+            table = grid.query_one(DataTable)
+        except NoMatches:
+            grid.focus()
+            return
+        if table.row_count > 0:
+            table.focus()
         else:
             grid.focus()
 
@@ -87,8 +92,13 @@ class Dashboard(App):
 
         self.push_screen(SymbolManagerScreen(), _cb)
 
-    def on_stock_card_selected(self, event: StockCard.Selected) -> None:
+    def on_stock_grid_widget_selected(self, event: StockGridWidget.Selected) -> None:
         self.push_screen(ChartScreen(event.symbol))
+
+    def action_refresh_selected_row(self) -> None:
+        if len(self.screen_stack) != 1:
+            return
+        self.query_one(StockGridWidget).action_refresh_signal()
 
     def action_request_quit(self) -> None:
         if len(self.screen_stack) == 1:
