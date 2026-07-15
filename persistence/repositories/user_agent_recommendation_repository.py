@@ -19,30 +19,30 @@ class UserAgentRecommendationRepository:
     _SELECT_ALL = """
         SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
         FROM user_agent_recommendations
-        ORDER BY created_at DESC
+        ORDER BY id DESC
     """
     _SELECT_BY_SYMBOL = """
         SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
         FROM user_agent_recommendations
         WHERE symbol = ?
-        ORDER BY created_at DESC
+        ORDER BY id DESC
     """
     _SELECT_BY_AGENT = """
         SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
         FROM user_agent_recommendations
         WHERE agent = ?
-        ORDER BY created_at DESC
+        ORDER BY id DESC
     """
     _SELECT_LATEST_BY_SYMBOL = """
         SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
         FROM user_agent_recommendations
-        WHERE symbol = ? ORDER BY created_at DESC LIMIT 1
+        WHERE symbol = ? ORDER BY id DESC LIMIT 1
     """
     _SELECT_PENDING = """
         SELECT id, created_at, agent, symbol, option, stop_loss, stop_profit, target_date, outcome
         FROM user_agent_recommendations
         WHERE outcome IS NULL
-        ORDER BY created_at DESC
+        ORDER BY id DESC
     """
     _SET_OUTCOME = "UPDATE user_agent_recommendations SET outcome = ? WHERE id = ?"
 
@@ -69,7 +69,7 @@ class UserAgentRecommendationRepository:
         target_date: date | None = None,
         outcome: Outcome | None = None,
     ) -> UserAgentRecommendation:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).isoformat()
         target_str = target_date.isoformat() if target_date else None
         outcome_str = outcome.value if outcome else None
         sl = float(stop_loss) if stop_loss is not None else None
