@@ -33,7 +33,7 @@ def _patch_grid_io(symbols: list[TaggedSymbol], *, connector: str = ""):
     service.get_meta.return_value = meta
     cfg = AppConfig(provider="mock", connector=connector)
     return (
-        patch("ui.dashboard._eval_pending"),
+        patch("ui.dashboard.app._eval_pending"),
         patch("ui.components.stock_grid.widget.symbol_repo.get_all", return_value=symbols),
         patch("ui.components.stock_grid.widget.recommendation_repo.get_latest_by_symbol", return_value=None),
         patch("ui.components.stock_grid.widget.create_service", return_value=service),
