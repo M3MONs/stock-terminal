@@ -3,6 +3,7 @@ from textual.binding import Binding
 # (group, key, action, footer_desc, show_in_footer)
 _SHORTCUTS: list[tuple[str, str, str, str, bool]] = [
     ("Watchlist", "r", "refresh_selected_row", "Refresh", True),
+    ("Watchlist", "k", "open_knowledge_folder", "Knowledge", True),
     ("Configuration", "s", "push_symbols", "Symbols", False),
     ("Configuration", "p", "pick_provider", "Provider", False),
     ("Configuration", "c", "pick_connector", "Connector", False),
