@@ -19,22 +19,15 @@ from ui.screens.recommendation_history import RecommendationHistoryScreen
 from ui.screens.signal_settings import SignalSettingsScreen
 from ui.screens.symbol_manager import SymbolManagerScreen
 
+from .constants import BINDINGS
+from .help_modal import ShortcutsHelpModal
+
 _log = logging.getLogger(__name__)
 
 
 class Dashboard(App):
     TITLE = "Stock-Terminal"
-    BINDINGS = [
-        ("q", "request_quit", "Quit"),
-        ("r", "refresh_selected_row", "Refresh row"),
-        ("s", "push_symbols", "Symbols"),
-        ("p", "pick_provider", "Provider"),
-        ("a", "push_agents", "Agents"),
-        ("c", "pick_connector", "Connector"),
-        ("i", "signal_settings", "Signals"),
-        ("h", "push_history", "History"),
-        ("l", "push_log_viewer", "Logs"),
-    ]
+    BINDINGS = BINDINGS
 
     _eval_thread: threading.Thread | None = None
 
@@ -89,6 +82,9 @@ class Dashboard(App):
     def _refresh_subtitle(self) -> None:
         cfg = app_config.load()
         self.sub_title = f"Provider: {cfg.provider}"
+
+    def action_show_shortcuts_help(self) -> None:
+        self.push_screen(ShortcutsHelpModal())
 
     def action_push_symbols(self) -> None:
         def _cb(symbol: str | None) -> None:
