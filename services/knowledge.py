@@ -11,8 +11,18 @@ _SUPPORTED = {".txt", ".md", ".pdf"}
 _DEFAULT_MAX_CHARS = 10000
 
 
+def knowledge_dir(symbol: str) -> Path:
+    return KNOWLEDGE_DIR / symbol.upper()
+
+
+def ensure_knowledge_dir(symbol: str) -> Path:
+    folder = knowledge_dir(symbol)
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
 def load_knowledge(symbol: str, max_chars: int = _DEFAULT_MAX_CHARS) -> str | None:
-    folder = KNOWLEDGE_DIR / symbol.upper()
+    folder = knowledge_dir(symbol)
     if not folder.is_dir():
         return None
 
