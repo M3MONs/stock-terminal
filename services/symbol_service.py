@@ -1,5 +1,5 @@
-from infra.paths import KNOWLEDGE_DIR
 from models.tagged_symbol import TaggedSymbol
+from services.knowledge import ensure_knowledge_dir
 from validators.base import SymbolValidator
 from validators.default import DefaultSymbolValidator
 from persistence.repositories.symbol_repository import SymbolRepository
@@ -18,7 +18,7 @@ class SymbolService:
         if error:
             raise ValueError(error)
         self._repository.add(symbol)
-        (KNOWLEDGE_DIR / symbol.upper()).mkdir(parents=True, exist_ok=True)
+        ensure_knowledge_dir(symbol)
 
     def remove(self, symbol: str) -> None:
         self._repository.remove(symbol)
