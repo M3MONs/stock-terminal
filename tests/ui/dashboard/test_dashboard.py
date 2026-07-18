@@ -1,5 +1,6 @@
 import pytest
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from textual.widgets import DataTable
@@ -7,6 +8,7 @@ from textual.widgets import DataTable
 from models.stock_meta import StockMeta
 from models.tagged_symbol import TaggedSymbol
 from ui.components.stock_grid import StockGridWidget
+from ui.components.error_modal import ErrorModal
 from ui.components.stock_grid.constants import EMPTY_ID, TABLE_ID
 from ui.dashboard import Dashboard
 from ui.dashboard.help_modal import ShortcutsHelpModal
@@ -119,3 +121,42 @@ async def test_help_shortcut_opens_shortcuts_modal() -> None:
             content = pilot.app.screen.query_one("#help-content")
             assert "Configuration" in str(content.render())
             assert "Symbols" in str(content.render())
+
+
+@pytest.mark.asyncio
+async def test_k_opens_knowledge_folder_for_cursor_symbol() -> None:
+    patches = _patch_grid_io(_symbols("AAPL", "MSFT"))
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4],
+        patches[5],
+        patch("ui.dashboard.app.ensure_knowledge_dir") as ensure_dir,
+        patch("ui.dashboard.app.reveal_in_file_manager") as reveal,
+    ):
+        ensure_dir.return_value = Path("/tmp/AAPL")
+        app = Dashboard()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            table = pilot.app.query_one(f"#{TABLE_ID}", DataTable)
+            table.focus()
+            await pilot.press("k")
+            await pilot.pause()
+            ensure_dir.assert_called_once_with("AAPL")
+            reveal.assert_called_once_with(Path("/tmp/AAPL"))
+
+
+@pytest.mark.asyncio
+async def test_k_with_empty_watchlist_shows_error() -> None:
+    patches = _patch_grid_io([])
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        app = Dashboard()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            grid = pilot.app.query_one(StockGridWidget)
+            assert "-hidden" not in grid.query_one(f"#{EMPTY_ID}").classes
+            await pilot.press("k")
+            await pilot.pause()
+            assert isinstance(pilot.app.screen, ErrorModal)
