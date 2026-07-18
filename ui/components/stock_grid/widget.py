@@ -220,6 +220,9 @@ class StockGridWidget(Widget):
             return None
         return str(row_key.value)
 
+    def cursor_symbol(self) -> str | None:
+        return self._cursor_symbol()
+
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if event.row_key.value:
             self.post_message(self.Selected(str(event.row_key.value)))
