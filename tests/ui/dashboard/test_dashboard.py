@@ -9,7 +9,9 @@ from models.tagged_symbol import TaggedSymbol
 from ui.components.stock_grid import StockGridWidget
 from ui.components.stock_grid.constants import EMPTY_ID, TABLE_ID
 from ui.dashboard import Dashboard
+from ui.dashboard.help_modal import ShortcutsHelpModal
 from ui.screens.chart import ChartScreen
+from ui.screens.symbol_manager import SymbolManagerScreen
 
 
 def _symbols(*syms: str) -> list[TaggedSymbol]:
@@ -21,7 +23,7 @@ def _patch_grid_io(symbols: list[TaggedSymbol]):
     service = MagicMock()
     service.get_meta.return_value = meta
     return (
-        patch("ui.dashboard._eval_pending"),
+        patch("ui.dashboard.app._eval_pending"),
         patch("ui.components.stock_grid.widget.symbol_repo.get_all", return_value=symbols),
         patch("ui.components.stock_grid.widget.recommendation_repo.get_latest_by_symbol", return_value=None),
         patch("ui.components.stock_grid.widget.create_service", return_value=service),
@@ -90,3 +92,30 @@ async def test_empty_state_shows_message() -> None:
             await pilot.press("enter")
             await pilot.pause()
             assert not isinstance(pilot.app.screen, ChartScreen)
+
+
+@pytest.mark.asyncio
+async def test_hidden_symbol_shortcut_opens_symbol_manager() -> None:
+    patches = _patch_grid_io(_symbols("AAPL"))
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        app = Dashboard()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.press("s")
+            await pilot.pause()
+            assert isinstance(pilot.app.screen, SymbolManagerScreen)
+
+
+@pytest.mark.asyncio
+async def test_help_shortcut_opens_shortcuts_modal() -> None:
+    patches = _patch_grid_io(_symbols("AAPL"))
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        app = Dashboard()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.press("?")
+            await pilot.pause()
+            assert isinstance(pilot.app.screen, ShortcutsHelpModal)
+            content = pilot.app.screen.query_one("#help-content")
+            assert "Configuration" in str(content.render())
+            assert "Symbols" in str(content.render())
