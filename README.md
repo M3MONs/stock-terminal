@@ -11,6 +11,7 @@ An AI-powered terminal stock tracker built with [Textual](https://github.com/Tex
 - **Candlestick charts** — OHLCV charts with multiple timeframes (`5m` to `1w`)
 - **AI trading signals** — multi-timeframe analysis via DeepSeek or Gemini LLMs
 - **Custom agents** — define signal personas as plain Markdown files
+- **Company knowledge** — per-symbol notes folder injected into AI signal prompts
 - **Recommendation history** — browse and filter past AI signal recommendations
 - **Multiple data providers** — Yahoo Finance (default) and TwelveData
 - **In-app log viewer** — press `L` to inspect the live log without leaving the TUI
@@ -33,6 +34,18 @@ uv run python main.py
 
 ## Key Bindings
 
+Press **`?`** in the app for the full grouped shortcut list. **`Ctrl+P`** opens the Textual command palette (Keys, Quit, theme, etc.).
+
+### Watchlist
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Open chart for selected symbol |
+| `r` | Refresh signal for selected row |
+| `k` | Open knowledge folder for selected symbol |
+
+### Configuration
+
 | Key | Action |
 |-----|--------|
 | `s` | Manage watched symbols |
@@ -40,8 +53,20 @@ uv run python main.py
 | `c` | Set LLM connector + API key |
 | `a` | Manage AI agents |
 | `i` | Signal settings (timeframes) |
+
+### Tools
+
+| Key | Action |
+|-----|--------|
 | `h` | Recommendation history |
 | `l` | In-app log viewer |
+
+### App
+
+| Key | Action |
+|-----|--------|
+| `?` | Show all keyboard shortcuts |
+| `Ctrl+P` | Command palette |
 | `q` | Quit |
 
 ## AI Signals
@@ -68,6 +93,12 @@ Agents are Markdown files stored in `~/.stock-terminal/agents/`. Their content i
 
 Manage agents from the **Agents** screen (`a`): create, edit, enable, or disable. Only one agent can be active at a time.
 
+## Company Knowledge
+
+Each watched symbol has its own folder under `~/.stock-terminal/knowledge/{SYMBOL}/`. Drop research notes there as `.txt`, `.md`, or `.pdf` files — their content is injected into the LLM prompt when generating signals for that symbol.
+
+Press **`k`** on the dashboard with a symbol selected to open its folder in your file manager. Folders are created automatically when you add a symbol to the watchlist.
+
 ## Data Providers
 
 | Provider | Notes |
@@ -85,7 +116,10 @@ All persistent data lives under `~/.stock-terminal/`:
 ~/.stock-terminal/
 ├── stock.db        # SQLite database
 ├── app.log         # Rotating log (1 MB × 3 backups)
-└── agents/         # Custom agent Markdown files
+├── agents/         # Custom agent Markdown files
+└── knowledge/      # Per-symbol research notes (.txt, .md, .pdf)
+    ├── AAPL/
+    └── MSFT/
 ```
 
 ## Development
