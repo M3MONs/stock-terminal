@@ -6,6 +6,8 @@ from textual.css.query import NoMatches
 from textual.widgets import DataTable, Footer, Header
 
 from infra import config as app_config
+from infra.file_manager import reveal_in_file_manager
+from services.knowledge import ensure_knowledge_dir
 from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
 from ui.components.confirm_modal import ConfirmModal
 from ui.components.error_modal import ErrorModal
@@ -103,6 +105,19 @@ class Dashboard(App):
         if len(self.screen_stack) != 1:
             return
         self.query_one(StockGridWidget).action_refresh_signal()
+
+    def action_open_knowledge_folder(self) -> None:
+        if len(self.screen_stack) != 1:
+            return
+        symbol = self.query_one(StockGridWidget).cursor_symbol()
+        if symbol is None:
+            self.show_error("No symbol selected. Add symbols with s.", title="Knowledge")
+            return
+        try:
+            folder = ensure_knowledge_dir(symbol)
+            reveal_in_file_manager(folder)
+        except OSError as exc:
+            self.show_error(f"Could not open knowledge folder: {exc}")
 
     def action_request_quit(self) -> None:
         if len(self.screen_stack) == 1:
