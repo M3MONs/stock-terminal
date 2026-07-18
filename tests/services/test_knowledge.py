@@ -100,3 +100,13 @@ class TestLoadKnowledge:
                 result = k.load_knowledge("AAPL")
         assert result is None
         assert "pypdf not installed" in caplog.text
+
+
+class TestKnowledgeDir:
+    def test_knowledge_dir_uppercases_symbol(self, knowledge_dir):
+        assert k.knowledge_dir("aapl") == knowledge_dir / "AAPL"
+
+    def test_ensure_knowledge_dir_creates_folder(self, knowledge_dir):
+        folder = k.ensure_knowledge_dir("msft")
+        assert folder == knowledge_dir / "MSFT"
+        assert folder.is_dir()
