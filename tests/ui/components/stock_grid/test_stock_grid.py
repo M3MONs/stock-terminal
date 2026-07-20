@@ -5,6 +5,12 @@ from unittest.mock import MagicMock, patch
 
 from textual.widgets import DataTable
 
+from connectors.base import (
+    ConnectorAuthError,
+    ConnectorError,
+    ConnectorNotConfiguredError,
+)
+from data.base import SourceAuthError, SourceError, SourceRateLimitError
 from models.app_config import AppConfig
 from models.stock_meta import StockMeta
 from models.tagged_symbol import TaggedSymbol
@@ -19,6 +25,7 @@ from ui.components.stock_grid.constants import (
     KEY_SYMBOL,
     KEY_TP,
     TABLE_ID,
+    WorkerKind,
 )
 from ui.dashboard import Dashboard
 
@@ -149,3 +156,41 @@ async def test_selected_message_opens_chart_symbol() -> None:
 
                 assert isinstance(pilot.app.screen, ChartScreen)
                 assert pilot.app.screen._symbol == "MSFT"
+
+
+def test_signal_error_message_from_exception() -> None:
+    from ui.components.stock_grid.widget import SignalErrorMessage
+
+    assert SignalErrorMessage.from_exception(ConnectorAuthError()) == SignalErrorMessage.AUTH.value
+    assert (
+        SignalErrorMessage.from_exception(ConnectorNotConfiguredError())
+        == SignalErrorMessage.NOT_CONFIGURED.value
+    )
+    err = ConnectorError("boom")
+    assert SignalErrorMessage.from_exception(err) == f"⚠ connector: {err}"
+    assert SignalErrorMessage.from_exception(RuntimeError("x")) == "⚠ x"
+    assert SignalErrorMessage.from_exception(None) == SignalErrorMessage.FALLBACK.value
+
+
+def test_meta_error_message_from_exception() -> None:
+    from ui.components.stock_grid.widget import MetaErrorMessage
+
+    assert MetaErrorMessage.from_exception(SourceAuthError()) == MetaErrorMessage.AUTH.value
+    assert (
+        MetaErrorMessage.from_exception(SourceRateLimitError())
+        == MetaErrorMessage.RATE_LIMIT.value
+    )
+    assert (
+        MetaErrorMessage.from_exception(SourceError())
+        == MetaErrorMessage.NOT_SUPPORTED.value
+    )
+    assert MetaErrorMessage.from_exception(RuntimeError("x")) == MetaErrorMessage.FALLBACK.value
+    assert MetaErrorMessage.from_exception(None) == MetaErrorMessage.FALLBACK.value
+
+
+def test_worker_kind_require_result() -> None:
+    assert WorkerKind.META.require_result is True
+    assert WorkerKind.SIGNAL.require_result is False
+    assert WorkerKind("meta") is WorkerKind.META
+    with pytest.raises(ValueError):
+        WorkerKind("default")
