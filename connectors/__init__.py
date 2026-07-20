@@ -20,7 +20,7 @@ def autodiscover() -> None:
     import connectors
 
     for _, name, _ in pkgutil.iter_modules(connectors.__path__):
-        if name not in ("base", "registry"):
+        if name not in ("base", "registry", "preflight"):
             try:
                 importlib.import_module(f"connectors.{name}")
             except ImportError:
