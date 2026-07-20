@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from connectors.preflight import connector_preflight
 from connectors.registry import get_connector, get_connector_key_field
 from data import create_service
 from services.knowledge import load_knowledge
@@ -81,6 +82,7 @@ class SignalService:
         self._user_agent_repo = user_agent_repo
 
     def generate(self, symbol: str, cfg: AppConfig) -> UserAgentRecommendation:
+        connector_preflight(cfg)
         _log.info("signal: generating %s via %s (fast=%s slow=%s)", symbol, cfg.connector, cfg.signal_timeframe_fast.value, cfg.signal_timeframe_slow.value)
         service = create_service(cfg.provider)
         fast_ohlcv = service.get_ohlcv(symbol, cfg.signal_timeframe_fast, limit=100)
