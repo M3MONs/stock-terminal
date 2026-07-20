@@ -19,6 +19,177 @@ from .constants import (
 _Grid = list[list[tuple[str, str]]]
 
 
+def _price_bounds(candles: list[Candle]) -> tuple[float, float, float]:
+    """Return (price_min, price_max, price_range) for the given candles."""
+    lows = [float(c.low) for c in candles]
+    highs = [float(c.high) for c in candles]
+    raw_min = min(lows)
+    raw_max = max(highs)
+    raw_range = raw_max - raw_min
+
+    # Add symmetric headroom so candles don't touch top/bottom chart edges.
+    if raw_range > 0:
+        pad = raw_range * PRICE_PADDING_RATIO
+    else:
+        baseline = max(abs(raw_max), 1.0)
+        pad = baseline * PRICE_PADDING_RATIO
+
+    price_min = raw_min - pad
+    price_max = raw_max + pad
+    price_range = price_max - price_min
+    return price_min, price_max, price_range
+
+
+def _render_candle(
+    grid: _Grid,
+    candle: Candle,
+    col_start: int,
+    center: int,
+    body_w: int,
+    chart_w: int,
+    chart_h: int,
+    price_max: float,
+    price_range: float,
+) -> None:
+    """Render a single candle (wick + body) into *grid* in-place."""
+    def p2r(price: float) -> int:
+        row = int((price_max - price) / price_range * (chart_h - 1))
+        return max(0, min(chart_h - 1, row))
+
+    o, h, l, c = (  # noqa: E741
+        float(candle.open),
+        float(candle.high),
+        float(candle.low),
+        float(candle.close),
+    )
+    color = "green" if c >= o else "red"
+
+    wick_top = p2r(h)
+    wick_bottom = p2r(l)
+    body_top = min(p2r(o), p2r(c))
+    body_bottom = max(p2r(o), p2r(c))
+    if center < 0 or center >= chart_w:
+        return
+    col_end = min(col_start + body_w, chart_w)
+    col_start = max(0, col_start)
+
+    for row in range(wick_top, wick_bottom + 1):
+        grid[row][center] = ("│", color)
+    for row in range(body_top, body_bottom + 1):
+        for col in range(col_start, col_end):
+            grid[row][col] = ("█", color)
+
+
+def _build_grid(
+    candles: list[Candle],
+    chart_w: int,
+    chart_h: int,
+    price_max: float,
+    price_range: float,
+    candle_w: int,
+) -> _Grid:
+    """Build a 2D grid of (char, style) tuples representing the candle chart area."""
+    grid: _Grid = [[(" ", "")] * chart_w for _ in range(chart_h)]
+    for i, candle in enumerate(candles):
+        col_start = i * candle_w
+        body_w = candle_w - CANDLE_GAP
+        center = col_start + body_w // 2
+        _render_candle(
+            grid, candle, col_start, center, body_w, chart_w, chart_h, price_max, price_range
+        )
+    return grid
+
+
+def _build_chart_text(
+    grid: _Grid,
+    chart_h: int,
+    has_axis: bool,
+    price_max: float,
+    price_range: float,
+) -> Text:
+    """Convert the candle grid into a single Text with optional price axis labels."""
+    label_interval = max(1, chart_h // LABEL_INTERVAL_ROWS)
+    text = Text()
+    for row_idx, row in enumerate(grid):
+        for char, style in row:
+            text.append(char, style=style or None)
+        if has_axis:
+            text.append("│", style="dim")
+            price = price_max - (row_idx / max(chart_h - 1, 1)) * price_range
+            if row_idx % label_interval == 0:
+                text.append(f"{price:^8.2f}")
+            else:
+                text.append(" " * 8)
+        if row_idx < chart_h - 1:
+            text.append("\n")
+    return text
+
+
+def _build_label_chars(
+    candles: list[Candle],
+    chart_w: int,
+    candle_w: int,
+    fmt: str,
+    label_every: int,
+) -> list[str]:
+    """Build a row of chars with date/time labels at regular candle intervals."""
+    chars = [" "] * chart_w
+    for i, candle in enumerate(candles):
+        if i % label_every == 0:
+            col_start = i * candle_w
+            center = col_start + candle_w // 2
+            label = candle.timestamp.strftime(fmt)
+            lstart = center - len(label) // 2
+            for j, ch in enumerate(label):
+                pos = lstart + j
+                if 0 <= pos < chart_w:
+                    chars[pos] = ch
+    return chars
+
+
+def _append_text_row(
+    text: Text,
+    chars: list[str],
+    has_axis: bool,
+    with_newline: bool,
+) -> None:
+    """Append a char row (+ optional axis padding + optional newline) to *text*."""
+    for ch in chars:
+        text.append(ch, style="dim")
+    if has_axis:
+        text.append("│", style="dim")
+        text.append(" " * 8)
+    if with_newline:
+        text.append("\n")
+
+
+def _append_date_row(
+    text: Text,
+    candles: list[Candle],
+    chart_w: int,
+    has_axis: bool,
+    candle_w: int,
+) -> None:
+    """Append one or two rows of date labels to *text* based on candle timestamps and spacing."""
+    if len(candles) < 2:
+        intraday = True
+    else:
+        intraday = (candles[1].timestamp - candles[0].timestamp).total_seconds() < 86400
+    primary_fmt = "%H:%M" if intraday else "%m/%d"
+    secondary_fmt = "%m/%d" if intraday else "%Y"
+    label_every = max(1, int((DATE_LABEL_LEN + 2) / candle_w) + 1)
+
+    primary_chars = _build_label_chars(
+        candles, chart_w, candle_w, primary_fmt, label_every
+    )
+    secondary_chars = _build_label_chars(
+        candles, chart_w, candle_w, secondary_fmt, label_every
+    )
+
+    _append_text_row(text, primary_chars, has_axis, with_newline=True)
+    _append_text_row(text, secondary_chars, has_axis, with_newline=False)
+
+
 class CandleChartWidget(Widget):
     DEFAULT_CSS = CSS
 
@@ -73,183 +244,6 @@ class CandleChartWidget(Widget):
             return Text("")
         return self._build_chart(self._series, W, H)
 
-    # --- private helpers ---
-
-    @staticmethod
-    def _price_bounds(candles: list[Candle]) -> tuple[float, float, float]:
-        """Return (price_min, price_max, price_range) for the given candles."""
-        lows = [float(c.low) for c in candles]
-        highs = [float(c.high) for c in candles]
-        raw_min = min(lows)
-        raw_max = max(highs)
-        raw_range = raw_max - raw_min
-
-        # Add symmetric headroom so candles don't touch top/bottom chart edges.
-        if raw_range > 0:
-            pad = raw_range * PRICE_PADDING_RATIO
-        else:
-            baseline = max(abs(raw_max), 1.0)
-            pad = baseline * PRICE_PADDING_RATIO
-
-        price_min = raw_min - pad
-        price_max = raw_max + pad
-        price_range = price_max - price_min
-        return price_min, price_max, price_range
-
-    @staticmethod
-    def _is_intraday(candles: list[Candle]) -> bool:
-        """Return True when candle interval is shorter than one full day."""
-        if len(candles) < 2:
-            return True
-        return (candles[1].timestamp - candles[0].timestamp).total_seconds() < 86400
-
-    @staticmethod
-    def _render_candle(
-        grid: _Grid,
-        candle: Candle,
-        col_start: int,
-        center: int,
-        body_w: int,
-        chart_w: int,
-        chart_h: int,
-        price_max: float,
-        price_range: float,
-    ) -> None:
-        """Render a single candle (wick + body) into *grid* in-place."""
-        def p2r(price: float) -> int:
-            row = int((price_max - price) / price_range * (chart_h - 1))
-            return max(0, min(chart_h - 1, row))
-
-        o, h, l, c = (  # noqa: E741
-            float(candle.open),
-            float(candle.high),
-            float(candle.low),
-            float(candle.close),
-        )
-        color = "green" if c >= o else "red"
-
-        wick_top = p2r(h)
-        wick_bottom = p2r(l)
-        body_top = min(p2r(o), p2r(c))
-        body_bottom = max(p2r(o), p2r(c))
-        if center < 0 or center >= chart_w:
-            return
-        col_end = min(col_start + body_w, chart_w)
-        col_start = max(0, col_start)
-
-        for row in range(wick_top, wick_bottom + 1):
-            grid[row][center] = ("│", color)
-        for row in range(body_top, body_bottom + 1):
-            for col in range(col_start, col_end):
-                grid[row][col] = ("█", color)
-
-    @staticmethod
-    def _build_grid(
-        candles: list[Candle],
-        chart_w: int,
-        chart_h: int,
-        price_max: float,
-        price_range: float,
-        candle_w: int,
-    ) -> _Grid:
-        """Build a 2D grid of (char, style) tuples representing the candle chart area."""
-        grid: _Grid = [[(" ", "")] * chart_w for _ in range(chart_h)]
-        for i, candle in enumerate(candles):
-            col_start = i * candle_w
-            body_w = candle_w - CANDLE_GAP
-            center = col_start + body_w // 2
-            CandleChartWidget._render_candle(
-                grid, candle, col_start, center, body_w, chart_w, chart_h, price_max, price_range
-            )
-        return grid
-
-    @staticmethod
-    def _build_chart_text(
-        grid: _Grid,
-        chart_h: int,
-        has_axis: bool,
-        price_max: float,
-        price_range: float,
-    ) -> Text:
-        """Convert the candle grid into a single Text with optional price axis labels."""
-        label_interval = max(1, chart_h // LABEL_INTERVAL_ROWS)
-        text = Text()
-        for row_idx, row in enumerate(grid):
-            for char, style in row:
-                text.append(char, style=style or None)
-            if has_axis:
-                text.append("│", style="dim")
-                price = price_max - (row_idx / max(chart_h - 1, 1)) * price_range
-                if row_idx % label_interval == 0:
-                    text.append(f"{price:^8.2f}")
-                else:
-                    text.append(" " * 8)
-            if row_idx < chart_h - 1:
-                text.append("\n")
-        return text
-
-    @staticmethod
-    def _build_label_chars(
-        candles: list[Candle],
-        chart_w: int,
-        candle_w: int,
-        fmt: str,
-        label_every: int,
-    ) -> list[str]:
-        """Build a row of chars with date/time labels at regular candle intervals."""
-        chars = [" "] * chart_w
-        for i, candle in enumerate(candles):
-            if i % label_every == 0:
-                col_start = i * candle_w
-                center = col_start + candle_w // 2
-                label = candle.timestamp.strftime(fmt)
-                lstart = center - len(label) // 2
-                for j, ch in enumerate(label):
-                    pos = lstart + j
-                    if 0 <= pos < chart_w:
-                        chars[pos] = ch
-        return chars
-
-    @staticmethod
-    def _append_text_row(
-        text: Text,
-        chars: list[str],
-        has_axis: bool,
-        with_newline: bool,
-    ) -> None:
-        """Append a char row (+ optional axis padding + optional newline) to *text*."""
-        for ch in chars:
-            text.append(ch, style="dim")
-        if has_axis:
-            text.append("│", style="dim")
-            text.append(" " * 8)
-        if with_newline:
-            text.append("\n")
-
-    @staticmethod
-    def _append_date_row(
-        text: Text,
-        candles: list[Candle],
-        chart_w: int,
-        has_axis: bool,
-        candle_w: int,
-    ) -> None:
-        """Append one or two rows of date labels to *text* based on candle timestamps and spacing."""
-        intraday = CandleChartWidget._is_intraday(candles)
-        primary_fmt = "%H:%M" if intraday else "%m/%d"
-        secondary_fmt = "%m/%d" if intraday else "%Y"
-        label_every = max(1, int((DATE_LABEL_LEN + 2) / candle_w) + 1)
-
-        primary_chars = CandleChartWidget._build_label_chars(
-            candles, chart_w, candle_w, primary_fmt, label_every
-        )
-        secondary_chars = CandleChartWidget._build_label_chars(
-            candles, chart_w, candle_w, secondary_fmt, label_every
-        )
-
-        CandleChartWidget._append_text_row(text, primary_chars, has_axis, with_newline=True)
-        CandleChartWidget._append_text_row(text, secondary_chars, has_axis, with_newline=False)
-
     def _build_chart(self, series: OHLCVSeries, W: int, H: int) -> Text:
         """Build the full Text for the candle chart including axis and date labels."""
         has_axis = W > PRICE_AXIS_WIDTH
@@ -267,11 +261,10 @@ class CandleChartWidget(Widget):
         if not candles:
             return Text("")
 
-        _, price_max, price_range = self._price_bounds(candles)
-        grid = self._build_grid(candles, chart_w, chart_h, price_max, price_range, candle_w)
-        text = self._build_chart_text(grid, chart_h, has_axis, price_max, price_range)
+        _, price_max, price_range = _price_bounds(candles)
+        grid = _build_grid(candles, chart_w, chart_h, price_max, price_range, candle_w)
+        text = _build_chart_text(grid, chart_h, has_axis, price_max, price_range)
         text.append("\n")
-        separator_chars = ["─"] * chart_w
-        self._append_text_row(text, separator_chars, has_axis, with_newline=True)
-        self._append_date_row(text, candles, chart_w, has_axis, candle_w)
+        _append_text_row(text, ["─"] * chart_w, has_axis, with_newline=True)
+        _append_date_row(text, candles, chart_w, has_axis, candle_w)
         return text
