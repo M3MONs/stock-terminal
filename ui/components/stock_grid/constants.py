@@ -1,7 +1,17 @@
+from enum import StrEnum
+
 TABLE_ID = "stock-table"
 EMPTY_ID = "stock-empty"
-WORKER_PREFIX = "meta_"
-SIGNAL_WORKER_PREFIX = "signal_"
+
+
+class WorkerKind(StrEnum):
+    META = "meta"
+    SIGNAL = "signal"
+
+    @property
+    def require_result(self) -> bool:
+        return self is WorkerKind.META
+
 
 COL_SYMBOL = "Symbol"
 COL_PRICE = "Price"
@@ -28,3 +38,5 @@ COLUMN_WEIGHTS: dict[str, int] = {
     KEY_SL: 2,
     KEY_TP: 2,
 }
+
+SIGNAL_STAGGER_SECONDS = 5.0
