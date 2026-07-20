@@ -6,6 +6,7 @@ from textual.widgets import DataTable, Footer, Input, Label
 from models.user_agent_recommendation import UserAgentRecommendation
 from persistence.repositories import recommendation_repo
 from .constants import BINDINGS, COL_AGENT, COL_DATE, COL_OPTION, COL_OUTCOME, COL_SL, COL_SP, COL_SYMBOL, COL_TARGET
+from .formatters import format_option, format_outcome, format_price
 from .styles import CSS
 
 
@@ -60,11 +61,11 @@ class RecommendationHistoryScreen(ModalScreen[None]):
                 r.created_at.strftime("%Y-%m-%d %H:%M"),
                 r.agent,
                 r.symbol,
-                r.option.value,
-                str(r.stop_loss) if r.stop_loss is not None else "-",
-                str(r.stop_profit) if r.stop_profit is not None else "-",
+                format_option(r.option),
+                format_price(r.stop_loss),
+                format_price(r.stop_profit),
                 r.target_date.isoformat() if r.target_date else "-",
-                r.outcome.value if r.outcome else "-",
+                format_outcome(r.outcome),
             )
 
     def on_input_changed(self, event: Input.Changed) -> None:
