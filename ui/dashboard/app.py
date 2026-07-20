@@ -8,7 +8,9 @@ from textual.widgets import DataTable, Footer, Header
 from infra import config as app_config
 from infra.file_manager import reveal_in_file_manager
 from services.knowledge import ensure_knowledge_dir
-from services.recommendation_evaluation_service import evaluate_all_pending as _eval_pending
+from services.recommendation_evaluation_service import (
+    evaluate_all_pending as _eval_pending,
+)
 from ui.components.confirm_modal import ConfirmModal
 from ui.components.error_modal import ErrorModal
 from ui.components.stock_grid import StockGridWidget
@@ -109,9 +111,11 @@ class Dashboard(App):
     def action_open_knowledge_folder(self) -> None:
         if len(self.screen_stack) != 1:
             return
-        symbol = self.query_one(StockGridWidget).cursor_symbol()
+        symbol = self.query_one(StockGridWidget)._cursor_symbol()
         if symbol is None:
-            self.show_error("No symbol selected. Add symbols with s.", title="Knowledge")
+            self.show_error(
+                "No symbol selected. Add symbols with s.", title="Knowledge"
+            )
             return
         try:
             folder = ensure_knowledge_dir(symbol)
